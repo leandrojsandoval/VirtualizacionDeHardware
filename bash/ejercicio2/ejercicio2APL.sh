@@ -128,9 +128,9 @@ multiplicar_matrices() {
    
     # Multiplicación de matrices
     for ((i = 0; i < filas_matriz1; i++)); do
-        for ((j = 0; j <= columnas_matriz2; j++)); do
+        for ((j = 0; j < columnas_matriz2; j++)); do
             suma=0
-            for ((k = 0; k <= columnas_matriz1; k++)); do
+            for ((k = 0; k < columnas_matriz1; k++)); do
                 suma=$((suma + ${m1[$i,$k]} * ${m2[$k,$j]}))
                 # echo "i:" $i
                 # echo "j:" $j
@@ -146,11 +146,11 @@ multiplicar_matrices() {
     # Mostrar el resultado
     echo "La matriz resultante es:"
     for ((i=0; i<filas_matriz1; i++)); do
-        for ((j=0; j<=columnas_matriz2; j++)); do
+        for ((j=0; j<columnas_matriz2; j++)); do
             # Mostrar el elemento de la matriz con coma como separador
             echo -n "${resultado[$i,$j]}"
             # Agregar coma si no es el último elemento de la fila
-            if [ $j -lt $((columnas_matriz2 )) ]; then
+            if [ $j -lt $((columnas_matriz2 - 1)) ]; then
                 echo -n "$separador"
             fi
         done
@@ -159,7 +159,7 @@ multiplicar_matrices() {
     
 
     ### ---------------------- LOGICA O FUNCIONES PARA SABER SI LA MATRIZ RESULTANTE ES FILA, COLUMNA, CUADRADA -----------------### 
-    ((columnas_matriz2++))
+    
      ##verifico si es cuadrada
     if [ "$filas_matriz1" -eq "$columnas_matriz2" ]; then
         es_cuadrada=true
