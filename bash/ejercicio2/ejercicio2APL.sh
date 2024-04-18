@@ -1,20 +1,18 @@
 #!/bin/bash
 
-#################################################
-#			 Virtualizacion de hardware		    #
-#	APL1 - ejercicio 2		                    #
-#	Nombre del script: ejercicio2APL.sh	        #
-#							                    #
-#	Integrantes:		                        #
-#         		                                #
-#         	                                    #
-#         Ocampo, Nicole           44451238		#
-#         		                                #
-#         	                                    #
-#							                    #
-#	Instancia de entrega:  Entrega		        #
-#							                    #
-#################################################
+#########################################################
+#			    Virtualizacion de hardware		        #
+#	APL1 - Ejercicio 1		                            #
+#	Nombre del script: Ejercicio1.sh	                #
+#							                            #
+#	Integrantes:		                                #
+#         		                                        #
+#       Ocampo, Nicole                      44451238	#
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#							                            #
+#	Instancia de entrega:  Entrega		                #
+#							                            #
+#########################################################
 
 function mostrar_ayuda() {
     echo "Uso: $0 -m1/--matriz1 <archivo> -m2/--matriz2 <archivo> -s/--separador <separador>"
@@ -34,10 +32,12 @@ multiplicar_matrices() {
 
     #Comprobación de la compatibilidad para la multiplicación
     filas_matriz1=$(wc -l < "$matriz1_file")
-    columnas_matriz1=$(head -n 1 "$matriz1_file" | tr -cd ',' | wc -c)
+    columnas_matriz1=$(head -n 1 "$matriz1_file" | tr -cd "$separador" | wc -c)
     filas_matriz2=$(wc -l < "$matriz2_file")
-    columnas_matriz2=$(head -n 1 "$matriz2_file" | tr -cd ',' | wc -c)
+    columnas_matriz2=$(head -n 1 "$matriz2_file" | tr -cd "$separador" | wc -c)
 
+    ((columnas_matriz1++))
+    ((columnas_matriz2++))
     
     # Verificar si las dimensiones son compatibles para la multiplicación
     if (( columnas_matriz1 != filas_matriz2 )); then
@@ -110,7 +110,7 @@ multiplicar_matrices() {
         
         # Incrementar el contador de fila
         ((contador_fila++))
-    done < "$matriz1_file"
+    done < "$matriz2_file"
 
     echo "La matriz 2 es:"
     for ((i=0; i<contador_fila; i++)); do
