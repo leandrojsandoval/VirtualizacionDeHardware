@@ -235,7 +235,7 @@ if [ ! -s "$matriz1" ] || [ ! -s "$matriz2" ]; then
     exit 1
 fi
 #verifico que el caracter separador no sea numero ni menos
-if [[ "$separador" =~ [0-9] ]] || [[ "$separador" == "-" ]]; then
+if [[ "$separador" =~ [0-9] ]] || [[ "$separador" == "-" ]] || [[ "$separador" == "." ]]; then
     echo "El carácter separador '$separador' no es válido."
     exit 1
 fi
