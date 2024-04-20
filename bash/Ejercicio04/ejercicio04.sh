@@ -67,46 +67,25 @@ validarParametros() { #directorio -s directoriosalida -p patron
 }
 
 loop() {
-	IFS=" "
-	cadena="$2"
-	cadena=${cadena//,/" "}
-	acciones=($(echo "$cadena"))
-
-	declare -A acc
-	acc["listar"]=0
-	acc["peso"]=0
-	acc["compilar"]=0
-	acc["publicar"]=0
-
-	inicio=0
-	#Usamos el array asociativo para insertar 1 en aquellas acciones que tenemos en la lista de acciones.
-	while [ "$inicio" -ne "${#acciones[*]}" ];do
-		acc["${acciones[$inicio]}"]=1
-		let inicio=$inicio+1
-	done
-
    	while [[ true ]];do
-   		inotifywait -r -m -e create -e modify -e delete --format "%e "%w%f"" "$1" | while read accion arch;do
-   			if [[ -f "$arch" || "$accion" == "DELETE" ]];
-   			then
-   				if [[ ${acc["listar"]} == 1 ]];
-   				then
-   					echo "$arch"
-   				fi
-
-   				if [[ ${acc["peso"]} == 1 && "$accion" != "DELETE" ]];
-   				then
-   					echo "$arch pesa `cat "$arch" | wc -c` bytes"
-   				fi
-
-   				if [[ ${acc["compilar"]} == 1 ]];
-   				then
- 					find "$1" -type f -exec cat '{}' \; | cat >> "$dir_base/bin/$(cat "$pidFile").txt"
-				fi
-
-				if [[ ${acc["publicar"]} == 1 ]];
+   		inotifywait -r -m -e create -e modify --format "%e "%w%f"" "$1" | while read accion arch;do
+			if [[ -f "$arch"]]
+			then
+				fecha=$(date +"%Y%m%d-%H%M%S")
+				pathlog="$2/log_$fecha.txt"
+				if[[ "$accion" == "MODIFY"]];
 				then
-					cp "$dir_base/bin/$(cat "$pidFile").txt" "$3/$(cat "$pidFile").txt"
+					path_comprimido="$2/$fecha.tar.gz"
+					touch "$pathlog"
+					tar -czf "$path_comprimido" --files-from /dev/null
+					if grep -q "patron_a_buscar" "$archivo";
+					then
+						echo "El patrón fue encontrado en el archivo: $archivo" >> "$pathlog"
+						cp "$arch" "$2"
+						tar -rf "$path_comprimido" "$2/$(basename "$archivo")"
+					fi
+				else
+					echo "$archivo ha sido creado" >> "$pathlog"
 				fi
 			fi
    		done
@@ -190,23 +169,15 @@ iniciarDemonio() {
     	 	 echo "el demonio ya existe"
     	  	exit 1;
 		fi
-		if [[ $# == 7 ]];then # -nohup- -c dirMoni -a acciones dirDes
-	   		nohup bash $0 "$1" "$2" "$3" "$4" "$5" "$7" 2>/dev/null &
-	   	else # -nohup- -c dirMoni -a acciones
-	   		nohup bash $0 "$1" "$2" "$3" "$4" "$5" 2>/dev/null &
-	   	fi
+		#lanzamos el proceso en segundo plano
+		nohup bash $0 "$1" "$2" "$3" "$4" "$5" "$7" 2>/dev/null &
 	else
 		#por aca debería pasar la segunda ejecución pudiendo almacenar el PID del proceso para luego eliminarlo.
 		#Tambien se inicia el loop
    	    pidFile="$dir_base/$$.pid";
 		touch "$pidFile"
    	    echo $$ > "$pidFile"
-   	    if [[ $# == 4 ]];
-   	    then #dirMoni acciones dirDes
-   	    	loop "$2" "$3" "$4"
-   		else #dirMoni acciones
-   			loop "$2" "$3"
-   		fi
+		loop "$2" "$3" "$4"
 	fi
 }
 
@@ -330,25 +301,15 @@ case "$1" in
 		validarParametros "$2" "$3" "$4" "$5" "$6"
 		if [[ $# == 6 ]];
 		then
-			let retorno=$?
-			if [[ $retorno == 2 ]];
-			then
-				#si el directorio no existe mandare el directorio de la script.
-				iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$dir_base"
-			else
-				iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
-			fi
+			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
 		else
-			iniciarDemonio "-nohup-" $1 "$2" "$3" "$4"
+			echo "cantidad de parametros inválida"
+			echo "Obtener ayuda $0 [ -h | -help | -? ]"
 		fi
 	else
 			#por aqui pasa la segunda
-			if [[ $# == 5 ]]; #en caso de que este -s más el directorio destino
-			then #-c dirMoni acciones dirDes
-    			iniciarDemonio "$1" "$2" "$4" "$5"
-    		else	# en caso de que no este -s más el directorio destino -c dirMoni acciones
-    			iniciarDemonio "$1" "$2" "$4"
-    		fi
+			#-d dirMonitoreo DirSalida patron
+			iniciarDemonio "$1" "$2" "$4" "$5"
 	fi
     ;;
   '-h' | '--help' | '-?')
@@ -356,6 +317,7 @@ case "$1" in
 	exit 1
     ;;
    '-k' | '--kill')
+   #modificar para que solo elimine el demonio del directorio indicado
 	eliminarDemonio
 	;;
   *)
