@@ -18,31 +18,37 @@ Param(
     [Parameter(Mandatory=$false)] [string]$separador = ","
 );
 
-function verificarMatriz {
-    Param ( [string]$rutaArchivoMatriz, [string]$separador);
-
-    $contenidoArchivo = Get-Content -Path $rutaArchivoMatriz;
-
-    $cantidadDeColumnasPrimeraLinea = $contenidoArchivo[0].Split($separador).Count;
-    for ($i = 1; $i -lt $contenidoArchivo.Length; $i++) {
-        $cantidadDeColumnasLineaActual = $contenidoArchivo[$i].Split($separador).Count;
-        if($cantidadDeColumnasPrimeraLinea -ne $cantidadDeColumnasLineaActual) {
-            return $false;
-        }
+function verificarSeparador {
+    Param ( [string]$separador )
+    if ($separador.Length -ne 1) {
+        Write-Host "El separador debe ser un único carácter."
+        return $false;
     }
-
+    if ($separador -match '\d' -or $separador -eq '-') {
+        Write-Host "El separador no puede ser un número ni el símbolo '-'.";
+        return $false;
+    }
     return $true;
 }
 
-function obtenerCantidadDeColumnasDeMatriz {
-    Param ( [string]$rutaArchivoMatriz, [string]$separador);
-    $primeraLinea = Get-Content -Path $rutaArchivoMatriz -TotalCount 1;
-    $cantidadDeColumnas = $primeraLinea.Split($separador).Count;
-    return $cantidadDeColumnas;
+function cargarMatrizDesdeRuta { 
+    Param ( [Parameter(Mandatory=$true)] [string]$rutaArchivoMatriz, [Parameter(Mandatory=$true)] [string]$separador);
+    $matriz = @{ };
+    $columnas = obtenerCantidadDeColumnasDeMatriz -rutaArchivoMatriz $rutaArchivoMatriz -separador $separador;
+    $i = 0;
+    foreach ($registro in Get-Content -Path $rutaArchivoMatriz) {
+        $elementosPorRegistro = $registro -split $separador;
+        for ($j = 0; $j -lt $columnas; $j++) {
+            $valor = [int]$elementosPorRegistro[$j];
+            $matriz["$i,$j"] = [int]$elementosPorRegistro[$j];
+        }
+        $i++;
+    }
+    return $matriz;
 }
 
 function calcularCantidadDeColumnasDeMatriz {
-    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
+    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz);
     $maxColumna = 0;
     foreach ($key in $matriz.Keys) {
         $columna = $key.Split(',')[1];
@@ -53,14 +59,8 @@ function calcularCantidadDeColumnasDeMatriz {
     return $maxColumna + 1;
 }
 
-function obtenerCantidadDeFilasDeMatriz {
-    Param ( [string]$rutaArchivoMatriz);
-    $cantidadDeFilas = (Get-Content -Path $rutaArchivoMatriz).Count
-    return $cantidadDeFilas;
-}
-
 function calcularCantidadDeFilasDeMatriz {
-    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
+    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz);
     $maxFila = 0;
     foreach ($key in $matriz.Keys) {
         $fila = $key.Split(',')[0];
@@ -71,40 +71,28 @@ function calcularCantidadDeFilasDeMatriz {
     return $maxFila + 1;
 }
 
-function convertirFilaStringAInt { 
-    Param ( 
-        [Parameter(Mandatory=$true)] [string]$linea, 
-        [Parameter(Mandatory=$true)] [string]$separador
-    );
-
-    $fila = $linea.Split($separador);
-    $filaEntera = @();
-
-    foreach ($elemento in $fila) {
-        $filaEntera += [int]$elemento
+function esMatrizColumna {
+    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
+    if((calcularCantidadDeColumnasDeMatriz $matriz) -eq 1) {
+        return $true;
     }
-
-    return $filaEntera;
+    return $false;
 }
 
-function cargarMatrizDesdeRuta { 
-    Param ( [Parameter(Mandatory=$true)] [string]$rutaArchivo, [Parameter(Mandatory=$true)] [string]$separador);
-
-    $matriz = @{ };
-
-    $columnas = obtenerCantidadDeColumnasDeMatriz -rutaArchivoMatriz $rutaArchivo -separador $separador;
-
-    $i = 0;
-
-    foreach ($registro in Get-Content -Path $rutaArchivo) {
-        $elementosPorRegistro = $registro -split $separador;
-        for ($j = 0; $j -lt $columnas; $j++) {
-            $matriz["$i,$j"] = [int]$elementosPorRegistro[$j];
-        }
-        $i++;
+function esMatrizCuadrada {
+    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
+    if((calcularCantidadDeFilasDeMatriz $matriz) -eq (calcularCantidadDeColumnasDeMatriz $matriz)) {
+        return $true;
     }
+    return $false;
+}
 
-    return $matriz;
+function esMatrizFila {
+    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
+    if((calcularCantidadDeFilasDeMatriz $matriz) -eq 1) {
+        return $true;
+    }
+    return $false;
 }
 
 function mostrarMatriz {
@@ -123,7 +111,7 @@ function mostrarMatriz {
         $matrizFormateada += $filaActual -join $separador;
     }
 
-    $matrizFormateada | ForEach-Object { Write-Host $_ };
+    $matrizFormateada;
 }
 
 function multiplicarMatrices {
@@ -148,55 +136,61 @@ function multiplicarMatrices {
     return $matrizResultado;
 }
 
-function esMatrizCuadrada {
-    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeFilasDeMatriz $matriz) -eq (calcularCantidadDeColumnasDeMatriz $matriz)) {
-        return $true;
-    }
-    return $false;
+function obtenerCantidadDeColumnasDeMatriz {
+    Param ( [string]$rutaArchivoMatriz);
+    $primeraLinea = Get-Content -Path $rutaArchivoMatriz -TotalCount 1;
+    $cantidadDeColumnas = $primeraLinea.Split($separador).Count;
+    return $cantidadDeColumnas;
 }
 
-function esMatrizFila {
-    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeFilasDeMatriz $matriz) -eq 1) {
-        return $true;
-    }
-    return $false;
+function obtenerCantidadDeFilasDeMatriz {
+    Param ( [string]$rutaArchivoMatriz);
+    $cantidadDeFilas = (Get-Content -Path $rutaArchivoMatriz).Count;
+    return $cantidadDeFilas;
 }
 
-function esMatrizColumna {
-    Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeColumnasDeMatriz $matriz) -eq 1) {
-        return $true;
+function verificarMatriz {
+    Param ( [string]$rutaArchivoMatriz, [string]$separador);
+
+    $contenidoArchivo = Get-Content -Path $rutaArchivoMatriz;
+    $cantidadDeColumnasPrimeraLinea = ($contenidoArchivo[0] -split $separador).Count;
+
+    for ($i = 0; $i -lt $contenidoArchivo.Length; $i++) {
+        $cantidadDeColumnasLineaActual = ($contenidoArchivo[$i] -split $separador).Count;
+        if($cantidadDeColumnasPrimeraLinea -ne $cantidadDeColumnasLineaActual) {
+            return $false;
+        }
     }
-    return $false;
+    return $true;
 }
 
 function main {
 
+    if(-not (verificarSeparador $separador)) {
+        exit;
+    }
+    
     if(-not (verificarMatriz $matriz1 $separador) -or -not (verificarMatriz $matriz2 $separador)) {
         Write-Host "ERROR: Los archivos en donde se encuentran las matrices no coinciden con un formato válido";
         exit;
     }
 
-    if((obtenerCantidadDeColumnasDeMatriz $matriz1 $separador) -ne (obtenerCantidadDeFilasDeMatriz $matriz2)) {
+    if((obtenerCantidadDeColumnasDeMatriz $matriz1) -ne (obtenerCantidadDeFilasDeMatriz $matriz2)) {
         Write-Error "ERROR: No se pueden multiplicar las matrices ya que el número de columnas de la primera matriz no coincide con el número de filas de la segunda matriz."
         exit;
     }
 
-    $m1 = cargarMatrizDesdeRuta -rutaArchivo $matriz1 -separador $separador;
+    $m1 = cargarMatrizDesdeRuta -rutaArchivoMatriz $matriz1 -separador $separador;
 
-    $m2 = cargarMatrizDesdeRuta -rutaArchivo $matriz2 -separador $separador;
-
-    $mResultado = multiplicarMatrices -matriz1 $m1 -matriz2 $m2;
-
-    Write-Host "";
+    $m2 = cargarMatrizDesdeRuta -rutaArchivoMatriz $matriz2 -separador $separador;
 
     Write-Host "Matriz 1: "
     mostrarMatriz $m1 $separador;
 
     Write-Host "Matriz 2: "
     mostrarMatriz $m2 $separador;
+
+    $mResultado = multiplicarMatrices -matriz1 $m1 -matriz2 $m2;
 
     Write-Host "Matriz Resultado: "
     mostrarMatriz $mResultado $separador;

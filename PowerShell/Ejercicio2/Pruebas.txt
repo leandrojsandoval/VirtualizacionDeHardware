@@ -1,0 +1,7 @@
+Probar con este tipo de ejecuciones en la terminal:
+
+.\Ejercicio2.ps1 -matriz1 ".\matriz-2x4-separador-dos-puntos.txt" -matriz2 ".\matriz-4x1-separador-dos-puntos.txt" -separador ":"
+
+.\Ejercicio2.ps1 -matriz1 ".\matriz2-3x3-separador-coma.txt" -matriz2 ".\matriz-3x3-separador-coma.txt"
+
+.\Ejercicio2.ps1 -matriz1 ".\matriz-3x2-separador-punto-y-coma.txt" -matriz2 ".\matriz-2x4-separador-punto-y-coma.txt" -separador ";"
