@@ -8,7 +8,7 @@
 #       Ocampo, Nicole Fabiana              44451238    #
 #       Sandoval Vasquez, Juan Leandro      41548235    #
 #                                                       #
-#	Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Primera Entrega               #
 #                                                       #
 #########################################################
 
