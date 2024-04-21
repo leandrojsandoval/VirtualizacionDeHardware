@@ -1,15 +1,15 @@
 #########################################################
-#			    Virtualizacion de hardware		        #
-#	APL1 - Ejercicio 2		                            #
-#	Nombre del script: Ejercicio2.ps1	                #
-#							                            #
-#	Integrantes:		                                #
-#         		                                        #
-#       Ocampo, Nicole                      44451238	#
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 2                                  #
+#   Nombre del script: Ejercicio2.ps1                   #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole                      44451238    #
 #       Sandoval Vasquez, Juan Leandro      41548235    #
-#							                            #
-#	Instancia de entrega:  Entrega		                #
-#							                            #
+#                                                       #
+#	Instancia de entrega:  Entrega                      #
+#                                                       #
 #########################################################
 
 Param(
@@ -23,11 +23,10 @@ Param(
 function cargarMatrizDesdeRuta { 
     Param ( [Parameter(Mandatory=$true)] [string]$rutaArchivoMatriz, [Parameter(Mandatory=$true)] [string]$separador);
     $matriz = @{ };
-    $columnas = obtenerCantidadDeColumnasDeMatriz -rutaArchivoMatriz $rutaArchivoMatriz -separador $separador;
     $i = 0;
     foreach ($registro in Get-Content -Path $rutaArchivoMatriz) {
         $elementosPorRegistro = $registro -split $separador;
-        for ($j = 0; $j -lt $columnas; $j++) {
+        for ($j = 0; $j -lt $elementosPorRegistro.Length; $j++) {
             $matriz["$i,$j"] = [int]$elementosPorRegistro[$j];
         }
         $i++;
@@ -38,53 +37,44 @@ function cargarMatrizDesdeRuta {
 # calcularCantidadDeColumnasDeMatriz y calcularCantidadDeFilasDeMatriz: Estas funciones se aplican a la hash table directamente.
 function calcularCantidadDeColumnasDeMatriz {
     Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz);
-    $maxColumna = 0;
+    $cantidadColumnas = 0;
     foreach ($key in $matriz.Keys) {
-        $columna = $key.Split(',')[1];
-        if ($columna -gt $maxColumna) {
-            $maxColumna = [int]$columna;
+        $columnaActual = $key.Split(',')[1];
+        if ($columnaActual -gt $cantidadColumnas) {
+            $cantidadColumnas = [int]$columnaActual;
         }
     }
-    return $maxColumna + 1;
+    return $cantidadColumnas + 1;
 }
 
 function calcularCantidadDeFilasDeMatriz {
     Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz);
-    $maxFila = 0;
+    $cantidadFilas = 0;
     foreach ($key in $matriz.Keys) {
-        $fila = $key.Split(',')[0];
-        if ($fila -gt $maxFila) {
-            $maxFila = [int]$fila;
+        $filaActual = $key.Split(',')[0];
+        if ($filaActual -gt $cantidadFilas) {
+            $cantidadFilas = [int]$filaActual;
         }
     }
-    return $maxFila + 1;
+    return $cantidadFilas + 1;
 }
 
 # esMatrizColumna: Si es una matriz columna, quiere decir que tendra una unica columna
 function esMatrizColumna {
     Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeColumnasDeMatriz $matriz) -eq 1) {
-        return $true;
-    }
-    return $false;
+    return (calcularCantidadDeColumnasDeMatriz $matriz) -eq 1;
 }
 
 # esMatrizColumna: Si es una matriz cuadrada, quiere decir que la cantidad de columnas son iguales que la cantidad de filas
 function esMatrizCuadrada {
     Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeFilasDeMatriz $matriz) -eq (calcularCantidadDeColumnasDeMatriz $matriz)) {
-        return $true;
-    }
-    return $false;
+    return (calcularCantidadDeFilasDeMatriz $matriz) -eq (calcularCantidadDeColumnasDeMatriz $matriz);
 }
 
 # esMatrizFila: Si es una matriz fila, quiere decir tendra una unica fila
 function esMatrizFila {
     Param ( [Parameter(Mandatory=$true)] [hashtable]$matriz );
-    if((calcularCantidadDeFilasDeMatriz $matriz) -eq 1) {
-        return $true;
-    }
-    return $false;
+    return (calcularCantidadDeFilasDeMatriz $matriz) -eq 1;
 }
 
 # mostrarMatriz: Reconstruyo la matriz que se encuentra en la hash table colocando nuevamente el separador para que tenga
@@ -136,14 +126,12 @@ function multiplicarMatrices {
 function obtenerCantidadDeColumnasDeMatriz {
     Param ( [string]$rutaArchivoMatriz);
     $primeraLinea = Get-Content -Path $rutaArchivoMatriz -TotalCount 1;
-    $cantidadDeColumnas = $primeraLinea.Split($separador).Count;
-    return $cantidadDeColumnas;
+    return $primeraLinea.Split($separador).Count;
 }
 
 function obtenerCantidadDeFilasDeMatriz {
     Param ( [string]$rutaArchivoMatriz);
-    $cantidadDeFilas = (Get-Content -Path $rutaArchivoMatriz).Count;
-    return $cantidadDeFilas;
+    return (Get-Content -Path $rutaArchivoMatriz).Count;
 }
 
 # verificarMatriz: Verifica que la matriz que venga en el archivo corresponda a una matriz completa.
@@ -157,23 +145,21 @@ function verificarMatriz {
 
     $contenidoArchivo = Get-Content -Path $rutaArchivoMatriz;
     $cantidadDeColumnasPrimeraLinea = ($contenidoArchivo[0] -split $separador).Count;
+    $matrizVerificada = $true;
 
-    for ($i = 0; $i -lt $contenidoArchivo.Length; $i++) {
+    for ($i = 0; $i -lt $contenidoArchivo.Length -and $matrizVerificada; $i++) {
         $cantidadDeColumnasLineaActual = ($contenidoArchivo[$i] -split $separador).Count;
         if($cantidadDeColumnasPrimeraLinea -ne $cantidadDeColumnasLineaActual) {
-            return $false;
+            $matrizVerificada = $false;
         }
     }
-    return $true;
+    return $matrizVerificada;
 }
 
 # verificarSeparador: Verifica que el separador no sea un digito, un menos (-) ni tampoco que sea mayor a un caracter
 function verificarSeparador {
-    Param ( [string]$separador )
-    if ($separador.Length -gt 1 -or $separador -match '\d' -or $separador -eq '-') {
-        return $false
-    }
-    return $true;
+    Param ( [string]$separador );
+    return -not (($separador.Length -gt 1) -or ($separador -match '\d') -or ($separador -eq '-'));
 }
 
 # verificarSeparadorConSeparadorEnArchivo: Los separadores deben ser iguales tanto el de los archivos como el proporcionado
@@ -185,11 +171,11 @@ function verificarSeparadorConSeparadorEnArchivo {
         $separadoresPorLinea = $linea -replace "[\d-]", "";
         for ($i = 0; $i -lt $separadoresPorLinea.Length -and $mismoSeparador; $i++) {
             if (-not ($separadoresPorLinea[$i] -contains $separador)) {
-                return $false;
+                $mismoSeparador = $false;
             }
         }
     }
-    return $true;
+    return $mismoSeparador;
 }
 
 function main {
@@ -234,35 +220,35 @@ function main {
 
     $m2 = cargarMatrizDesdeRuta -rutaArchivoMatriz $matriz2 -separador $separador;
 
-    Write-Host "Matriz 1: "
+    Write-Output "Matriz 1: "
     mostrarMatriz $m1 $separador;
 
-    Write-Host "Matriz 2: "
+    Write-Output "Matriz 2: "
     mostrarMatriz $m2 $separador;
 
     $mResultado = multiplicarMatrices -matriz1 $m1 -matriz2 $m2;
 
-    Write-Host "Matriz Resultado: "
+    Write-Output "Matriz Resultado: "
     mostrarMatriz $mResultado $separador;
 
-    Write-Host "El orden de la matriz es de obtener $(calcularCantidadDeFilasDeMatriz $mResultado)X$(calcularCantidadDeColumnasDeMatriz $mResultado)";
+    Write-Output "El orden de la matriz es de $(calcularCantidadDeFilasDeMatriz $mResultado)X$(calcularCantidadDeColumnasDeMatriz $mResultado)";
 
     if(esMatrizCuadrada $mResultado) {
-        "La matriz resultado es una matriz cuadrada";
+        Write-Output "La matriz resultado es una matriz cuadrada";
     } else {
-        "La matriz resultado no es una matriz cuadrada";
+        Write-Output "La matriz resultado no es una matriz cuadrada";
     }
 
     if(esMatrizFila $mResultado) {
-        "La matriz es una matriz fila";
+        Write-Output "La matriz es una matriz fila";
     } else {
-        "La matriz no es una matriz fila";
+        Write-Output "La matriz no es una matriz fila";
     }
 
     if(esMatrizColumna $mResultado) {
-        "La matriz es una matriz columna";
+        Write-Output "La matriz es una matriz columna";
     } else {
-        "La matriz no es una matriz columna";
+        Write-Output "La matriz no es una matriz columna";
     }
 }
 
