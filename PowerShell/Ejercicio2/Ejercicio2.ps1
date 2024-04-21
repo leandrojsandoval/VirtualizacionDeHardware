@@ -13,9 +13,9 @@
 #########################################################
 
 Param(
-    [Parameter(Mandatory=$true)] [string]$matriz1,
-    [Parameter(Mandatory=$true)] [string]$matriz2,
-    [Parameter(Mandatory=$false)] [string]$separador = ","
+    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string]$matriz1,
+    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string]$matriz2,
+    [Parameter(Mandatory=$false)] [ValidateNotNullOrEmpty()] [ValidateLength(1,1)] [ValidatePattern('^[^-0-9]$')] [string]$separador = ","
 );
 
 # cargarMatrizDesdeRuta: Para cargar la matriz desde el archivo utilizo un hash table que tenga como claves filas y columnas.
@@ -141,25 +141,20 @@ function obtenerCantidadDeFilasDeMatriz {
 # 4,5
 # Se dara como invalida, esto se controla calculando la cantidad de elementos por linea de registros
 function verificarMatriz {
-    Param ( [string]$rutaArchivoMatriz, [string]$separador);
-
-    $contenidoArchivo = Get-Content -Path $rutaArchivoMatriz;
-    $cantidadDeColumnasPrimeraLinea = ($contenidoArchivo[0] -split $separador).Count;
-    $matrizVerificada = $true;
-
-    for ($i = 0; $i -lt $contenidoArchivo.Length -and $matrizVerificada; $i++) {
-        $cantidadDeColumnasLineaActual = ($contenidoArchivo[$i] -split $separador).Count;
-        if($cantidadDeColumnasPrimeraLinea -ne $cantidadDeColumnasLineaActual) {
-            $matrizVerificada = $false;
+    Param ( [string]$rutaArchivoMatriz, [string]$separador)
+    $archivo = Get-Content -Path $rutaArchivoMatriz
+    $primerRegistro = $true
+    $cantidadDeColumnasPrimeraLinea = 0
+    foreach ($registro in $archivo) {
+        $cantidadDeColumnasLineaActual = ($registro -split $separador).Count;
+        if ($primerRegistro) {
+            $cantidadDeColumnasPrimeraLinea = $cantidadDeColumnasLineaActual;
+            $primerRegistro = $false;
+        } elseif ($cantidadDeColumnasLineaActual -ne $cantidadDeColumnasPrimeraLinea) {
+            return $false;
         }
     }
-    return $matrizVerificada;
-}
-
-# verificarSeparador: Verifica que el separador no sea un digito, un menos (-) ni tampoco que sea mayor a un caracter
-function verificarSeparador {
-    Param ( [string]$separador );
-    return -not (($separador.Length -gt 1) -or ($separador -match '\d') -or ($separador -eq '-'));
+    return $true;
 }
 
 # verificarSeparadorConSeparadorEnArchivo: Los separadores deben ser iguales tanto el de los archivos como el proporcionado
@@ -191,12 +186,6 @@ function main {
         Write-Error "ERROR: Alguno de los archivos pasados por parámetro está vacío.";
         exit;
     }    
-
-    # Verifico que el separador proporcionado sea un separador valido (no números y tampoco el símbolo menos)
-    if(-not (verificarSeparador $separador)) {
-        Write-Error "ERROR: El separador indicando no es un separador valido";
-        exit;
-    }
 
     # Verifico que el separador coincida con el separador de los archivos
     if(-not(verificarSeparadorConSeparadorEnArchivo $matriz1 $separador) -or  -not(verificarSeparadorConSeparadorEnArchivo $matriz2 $separador)) {
