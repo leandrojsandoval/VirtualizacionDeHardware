@@ -181,7 +181,7 @@ iniciarDemonio() {
 	fi
 }
 
-#esta función solo se ejecutara cuando envie el parametro -d
+#esta función solo se ejecutara cuando envie el parametro -k o --kill
 eliminarDemonio() {
 	#Obtenemos todos los demonios creados en anteriores scripts
 	demonios=($(find "$dir_base" -name "*.pid" -type f))
@@ -251,6 +251,37 @@ eliminarDemonio() {
 	done
 }
 
+
+eliminarDemonioUnDirectorio() {
+    # Directorio a monitorear pasado como argumento
+    dir_monitoreado="$1"
+    
+    # Obtenemos todos los demonios creados en anteriores scripts
+    demonios=($(find "$dir_base" -name "*.pid" -type f))
+    
+    if [[ "${#demonios[*]}" == 0 ]]; then
+        echo "No hay demonios que eliminar..."
+        exit 1
+    fi
+
+    # Buscar y eliminar solo el demonio asociado con el directorio especificado
+    for pid_file in "${demonios[@]}"; do
+        # Extraer el proceso que corresponde al pid en el archivo pid
+        pid=$(cat "$pid_file")
+        # Usamos ps para obtener los detalles del comando que lanzó este pid
+        ps_line=$(ps -p $pid -o cmd=)
+        
+        # Verificar si la línea del comando contiene el directorio monitoreado
+        if [[ "$ps_line" == *"inotifywait"* && "$ps_line" == *"$dir_monitoreado"* ]]; then
+            echo "Eliminando demonio que monitorea: $dir_monitoreado"
+            kill $pid 2>/dev/null
+            true > "$pid_file"
+            rm "$pid_file"
+        fi
+    done
+}
+
+
 mostrarAyuda() {
 	echo "Modo de uso: bash $0 [-d | --directorio] [Directorio de monitoreo] [ -s | --salida ] [Directorio de backup de archivos] [ -p | --patron ] [patron de busqueda]"
 	echo ""
@@ -269,26 +300,11 @@ if [[ "$1" == "-nohup-" ]];
 then
 	shift;	##borra el nohup y corre las demas variables una posición.
 else # si no es igual a -nohup- significa que es la primer vuelta y apenas se comenzo a ejecutar el proceso por lo que aqui es donde tengo qeu crear las fifos donde se almacenaran la fecha inicial.
-	if [[ "$1" != "-k" && "$1" != "--kill" && "$1" != "-h" && "$1" != "--help" && "$1" != "-?" ]];
+	if [[ (("$1" == "-d" || "$1" == "--directorio") && $# != 3 ) && ( ("$1" == "-d" || "$1" == "--directorio") && $# != 6) && ( ("$1" == "-h" || "$1" == "--help" || "$1" == "-?" ) && $# != 1) ]]
 	then
-		if [ ! -n "$2" ];
-		then
-			echo "ERROR: falta pasar directorio a monitorear"
-			exit 1;
-		fi
-	else
-		if [[ "$1" == "-k" && $# != 3 ]]
-		then
-			echo "Error, -k debe enviarse junto con el directorio a monitorear"
-			echo "Ejemplo: $0 -d directorio -k"
-			exit 1
-		fi
-		if [[ "$1" == "--kill" && $# != 3 ]]
-		then
-			echo "Error, -kill debe enviarse junto con el directorio a monitorear"
-			echo "Ejemplo: $0 -d directorio -kill"
-			exit 1
-		fi
+		echo "Error: cantidad de parametros errónea"
+		mostrarAyuda
+		exit 1;
 	fi
 fi
 
@@ -298,13 +314,18 @@ case "$1" in
 	if [[ "$posi" != "-nohup-" ]]; 
 	then
 		#por primera ves debería pasar por aca.
-		validarParametros "$2" "$3" "$4" "$5" "$6"
-		if [[ $# == 6 ]];
+		if [[ $# == 3 ]]
 		then
-			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
+			if [ ! -d "$2" ];
+			then
+				echo "Error: \"$2\" no es un directorio"
+				mostrarAyuda
+				exit 1;
+			fi
+			eliminarDemonioUnDirectorio "$2"
 		else
-			echo "cantidad de parametros inválida"
-			echo "Obtener ayuda $0 [ -h | -help | -? ]"
+			validarParametros "$2" "$3" "$4" "$5" "$6"
+			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
 		fi
 	else
 			#por aqui pasa la segunda
@@ -316,10 +337,6 @@ case "$1" in
 	mostrarAyuda
 	exit 1
     ;;
-   '-k' | '--kill')
-   #modificar para que solo elimine el demonio del directorio indicado
-	eliminarDemonio
-	;;
   *)
   echo "Obtener ayuda $0 [ -h | -help | -? ]"
 esac
