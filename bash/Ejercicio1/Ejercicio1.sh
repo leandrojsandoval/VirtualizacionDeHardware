@@ -1,17 +1,17 @@
 #!/bin/bash
 
 #########################################################
-#			    Virtualizacion de hardware		        #
-#	APL1 - Ejercicio 1		                            #
-#	Nombre del script: Ejercicio1.sh	                #
-#							                            #
-#	Integrantes:		                                #
-#         		                                        #
-#       Ocampo, Nicole                      44451238	#
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 1                                  #
+#   Nombre del script: Ejercicio1.sh                    #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
 #       Sandoval Vasquez, Juan Leandro      41548235    #
-#							                            #
-#	Instancia de entrega:  Entrega		                #
-#							                            #
+#                                                       #
+#	Instancia de entrega: Primera Entrega               #
+#                                                       #
 #########################################################
 
 # ================================= Variables =================================
