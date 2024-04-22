@@ -12,9 +12,40 @@
 #                                                       #
 #########################################################
 
+<#
+.SYNOPSIS
+Script para la multiplicación de matrices a partir de archivos de texto.
+
+.DESCRIPTION
+Este script realiza la operación de multiplicación de matrices que se encuentran en dos archivos de texto cada uno junton con un separador (opcional).
+Leer ambos archivos para cargar las matrices en objetos, devolviendo un objeto resultante correspondiente a la matriz resultado mostrandolo por pantalla.
+Ademas, se informara:
+    • Orden de la matriz.
+    • Si es cuadrada.
+    • Si es fila.
+    • Si es columna.
+
+.PARAMETER matriz1
+La ruta al archivo que contiene la primera matriz.
+
+.PARAMETER matriz2
+La ruta al archivo que contiene la segunda matriz.
+
+.PARAMETER separador
+El separador utilizado para delimitar los elementos en los archivos de matriz. El valor predeterminado es ",".
+
+.EXAMPLE
+.\Ejercicio2.ps1 -matriz1 "C:\Ruta\Matriz1.txt" -matriz2 "C:\Ruta\Matriz2.txt" -separador ";"
+Multiplica las matrices contenidas en los archivos Matriz1.txt y Matriz2.txt utilizando ";" como separador.
+Esto siempre y cuando cumplan con la condicion de multiplicaciones de matrices: las columnas de -matriz1 deben ser iguales a las filas de -matriz2 (en ese orden).
+
+.NOTES
+Los archivos de matriz deben contener elementos separados por el separador especificado, y cada fila de la matriz debe estar en una línea separada.
+#>
+
 Param(
-    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string]$matriz1,
-    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string]$matriz2,
+    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [System.IO.DirectoryInfo]$matriz1,
+    [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [System.IO.DirectoryInfo]$matriz2,
     [Parameter(Mandatory=$false)] [ValidateNotNullOrEmpty()] [ValidateLength(1,1)] [ValidatePattern('^[^-0-9]$')] [string]$separador = ","
 );
 
