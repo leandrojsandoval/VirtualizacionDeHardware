@@ -58,7 +58,7 @@ param(
 
 # Función para calcular la nota final de un alumno en una materia
 function CalcularNota($notas) {
-    $peso = 10 / ($notas.Count - 1) # Restamos 1 para excluir el DNI del cálculo
+    $peso = 10 / ($notas.Count) # Restamos 1 para excluir el DNI del cálculo
     $nota_final = 0
 
     foreach ($nota in $notas) {
@@ -77,8 +77,10 @@ $notas_alumnos = @()
 
 # Recorre los archivos CSV en el directorio especificado
 foreach ($archivo in Get-ChildItem -Path $directorio -Filter *.csv) {
+    #Para cada archivo CSV, se obtiene el nombre del archivo (que se asume que representa el nombre de la materia) sin la extensión usando 
     $materia = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name)
-    $contenido = Get-Content $archivo.FullName | Select-Object -Skip 1  # Omitir la primera línea
+    #Se lee el contenido del archivo CSV usando Get-Content y se omite la primera línea ( los encabezados) usando Select-Object -Skip 1.
+    $contenido = Get-Content $archivo.FullName | Select-Object -Skip 1 
 
     foreach ($linea in $contenido) {
         $datos = $linea.Split(',')
@@ -96,26 +98,42 @@ foreach ($archivo in Get-ChildItem -Path $directorio -Filter *.csv) {
         # Si el alumno no está en la lista, lo agrega
         if (-not $alumno_existente) {
             $alumno = @{
-                "dni" = $dni
+                #"dni" = $dni
                 "notas" = @()
+                "dni" = $dni
             }
             $notas_alumnos += New-Object PSObject -Property $alumno
             $alumno_existente = $notas_alumnos | Where-Object { $_.dni -eq $dni }
         }
 
+
         # Agrega la nota de la materia al alumno
-        $materia_nota = @{
+        $materia_nota = New-Object PSObject -Property @{
             "materia" = [int]$materia
-            "nota" = $nota_final
+            "nota" =  $nota_final
         }
-        $alumno_existente.notas += New-Object PSObject -Property $materia_nota
+        Write-Output $materia_nota
+        #$alumno_existente.notas += $materia_nota
+
+        # Si notas no está inicializado, inicialízalo como un array vacío
+        if (-not $alumno_existente.notas) {
+            $alumno_existente.notas = @()
+        }
+         # Agrega la nueva entrada al formato deseado
+         # $alumno_existente.notas += $materia_nota
+
+        # Agrega la nueva entrada al formato deseado
+        $alumno_existente.notas +=  New-Object PSObject -Property @{
+        "materia" = $materia_nota.materia
+        "nota" = $materia_nota.nota
+        }
     }
 }
 
 # Genera el archivo JSON
 $json_output = @{
     "notas" = $notas_alumnos
-} | ConvertTo-Json
+} | ConvertTo-Json -Depth 10
 
 # Muestra el resultado por pantalla si se especificó el parámetro -pantalla
 if ($pantalla) {
