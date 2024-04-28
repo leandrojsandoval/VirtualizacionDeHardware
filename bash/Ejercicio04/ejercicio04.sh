@@ -29,7 +29,7 @@ validarParametros() { #directorio -s directoriosalida -p patron
 		exit 1;
 	fi
 
-	if [[ "$2" != "-s" && "$2" != "--salida"]];
+	if [[ "$2" != "-s" && "$2" != "--salida" ]]
 	then
 		echo "Error, el tercer parametro debería de ser "-s" o "--salida""
 		mostrarAyuda
@@ -50,7 +50,7 @@ validarParametros() { #directorio -s directoriosalida -p patron
 		exit 1;
 	fi
 
-	if [[ "$4" != "-p" && "$4" != "--patron"]];
+	if [[ "$4" != "-p" && "$4" != "--patron" ]]
 	then
 		echo "Error, el quinto parametro debería de ser "-p" o "--patron""
 		mostrarAyuda
@@ -69,11 +69,11 @@ validarParametros() { #directorio -s directoriosalida -p patron
 loop() {
    	while [[ true ]];do
    		inotifywait -r -m -e create -e modify --format "%e "%w%f"" "$1" | while read accion arch;do
-			if [[ -f "$arch"]]
+			if [ -f "$arch"];
 			then
 				fecha=$(date +"%Y%m%d-%H%M%S")
 				pathlog="$2/log_$fecha.txt"
-				if[[ "$accion" == "MODIFY"]];
+				if [[ "$accion" == "MODIFY" ]]
 				then
 					path_comprimido="$2/$fecha.tar.gz"
 					touch "$pathlog"
@@ -296,14 +296,19 @@ mostrarAyuda() {
 nombreScript=$(readlink -f $0)
 dir_base=`dirname "$nombreScript"`
 posi="$1"
+echo "$1"
 if [[ "$1" == "-nohup-" ]]; 
 then
 	shift;	##borra el nohup y corre las demas variables una posición.
 else # si no es igual a -nohup- significa que es la primer vuelta y apenas se comenzo a ejecutar el proceso por lo que aqui es donde tengo qeu crear las fifos donde se almacenaran la fecha inicial.
-	if [[ (("$1" == "-d" || "$1" == "--directorio") && $# != 3 ) && ( ("$1" == "-d" || "$1" == "--directorio") && $# != 6) && ( ("$1" == "-h" || "$1" == "--help" || "$1" == "-?" ) && $# != 1) ]]
+	if [[ (("$1" == "-d" || "$1" == "--directorio") && $# != 3 ) && ( ("$1" == "-d" || "$1" == "--directorio") && $# != 6) ]]
 	then
 		echo "Error: cantidad de parametros errónea"
-		mostrarAyuda
+		exit 1;
+	fi
+	if [[ ("$1" == "-h" || "$1" == "--help" || "$1" == "-?" ) && $# != 1 ]]
+	then
+		echo "Error: cantidad de parametros errónea"
 		exit 1;
 	fi
 fi
