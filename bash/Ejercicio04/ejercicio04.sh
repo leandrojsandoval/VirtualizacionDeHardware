@@ -69,7 +69,7 @@ validarParametros() { #directorio -s directoriosalida -p patron
 loop() {
    	while [[ true ]];do
    		inotifywait -r -m -e create -e modify --format "%e "%w%f"" "$1" | while read accion arch;do
-			if [ -f "$arch"];
+			if [ -f "$arch" ];
 			then
 				fecha=$(date +"%Y%m%d-%H%M%S")
 				pathlog="$2/log_$fecha.txt"
@@ -78,14 +78,14 @@ loop() {
 					path_comprimido="$2/$fecha.tar.gz"
 					touch "$pathlog"
 					tar -czf "$path_comprimido" --files-from /dev/null
-					if grep -q "patron_a_buscar" "$archivo";
+					if grep -q "$3" "$arch";
 					then
-						echo "El patrón fue encontrado en el archivo: $archivo" >> "$pathlog"
+						echo "El patrón fue encontrado en el archivo: $arch" >> "$pathlog"
 						cp "$arch" "$2"
-						tar -rf "$path_comprimido" "$2/$(basename "$archivo")"
+						tar -rf "$path_comprimido" "$2/$(basename "$arch")"
 					fi
 				else
-					echo "$archivo ha sido creado" >> "$pathlog"
+					echo "$arch ha sido creado" >> "$pathlog"
 				fi
 			fi
    		done
@@ -212,8 +212,6 @@ eliminarDemonioUnDirectorio() {
 		#obtenemos el pid del inotify para posteriormente matar el proceso
 		if [[ $nueva =~ ^([0-9]+) ]]; then
    			 pidinotify="${BASH_REMATCH[1]}"
-			 echo "El PID del inotify es: $pidinotify"
-			 echo "Eliminando proceso inofity"
 			 kill "$pidinotify" 2>/dev/null
 		fi
     done
