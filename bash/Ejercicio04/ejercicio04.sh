@@ -77,13 +77,16 @@ loop() {
 				then
 					path_comprimido="$2/$fecha.tar.gz"
 					touch "$pathlog"
-					tar -czf "$path_comprimido" --files-from /dev/null
-					if grep -q "$3" "$arch";
-					then
+					tar -cf "$path_comprimido" --files-from /dev/null
+					linea_coincidente=$(grep "$3" "$arch" | head -n 1)
+					if [ -n "$linea_coincidente" ]; then
 						echo "El patrón fue encontrado en el archivo: $arch" >> "$pathlog"
 						cp "$arch" "$2"
 						tar -rf "$path_comprimido" "$2/$(basename "$arch")"
+					else
+						echo "No hubo coindidencia alguna con el patrón." >> "$pathlog"
 					fi
+					gzip "$path_comprimido"
 				else
 					echo "$arch ha sido creado" >> "$pathlog"
 				fi
