@@ -195,7 +195,7 @@ eliminarDemonio() {
 	posvec=0
 	pos=0
 	
-
+	
 	while [ $pos -lt ${#demonios[@]} ];do
 		if [[ "${demonios[$pos]}" =~ .*.pid ]];
 		then
@@ -255,7 +255,6 @@ eliminarDemonio() {
 eliminarDemonioUnDirectorio() {
     # Directorio a monitorear pasado como argumento
     dir_monitoreado="$1"
-    
     # Obtenemos todos los demonios creados en anteriores scripts
     demonios=($(find "$dir_base" -name "*.pid" -type f))
     
@@ -271,13 +270,23 @@ eliminarDemonioUnDirectorio() {
         # Usamos ps para obtener los detalles del comando que lanzó este pid
         ps_line=$(ps -p $pid -o cmd=)
         
-        # Verificar si la línea del comando contiene el directorio monitoreado
-        if [[ "$ps_line" == *"inotifywait"* && "$ps_line" == *"$dir_monitoreado"* ]]; then
+		# Verificar si la línea del comando contiene el directorio monitoreado
+		if [[ "$ps_line" == *"$dir_monitoreado"* ]]; then
             echo "Eliminando demonio que monitorea: $dir_monitoreado"
             kill $pid 2>/dev/null
             true > "$pid_file"
             rm "$pid_file"
         fi
+		#Obtenemos la informacion correspondiente del inotifywait que se encuentra monitoreando el directorio.
+		cosas=$(ps -eo pid,cmd | grep "inotifywait" | grep "$1")
+		nueva="${cosas:1}"
+		#obtenemos el pid del inotify para posteriormente matar el proceso
+		if [[ $nueva =~ ^([0-9]+) ]]; then
+   			 pidinotify="${BASH_REMATCH[1]}"
+			 echo "El PID del inotify es: $pidinotify"
+			 echo "Eliminando proceso inofity"
+			 kill "$pidinotify" 2>/dev/null
+		fi
     done
 }
 
@@ -296,7 +305,6 @@ mostrarAyuda() {
 nombreScript=$(readlink -f $0)
 dir_base=`dirname "$nombreScript"`
 posi="$1"
-echo "$1"
 if [[ "$1" == "-nohup-" ]]; 
 then
 	shift;	##borra el nohup y corre las demas variables una posición.
@@ -328,6 +336,7 @@ case "$1" in
 				exit 1;
 			fi
 			eliminarDemonioUnDirectorio "$2"
+			#eliminarDemonio
 		else
 			validarParametros "$2" "$3" "$4" "$5" "$6"
 			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
