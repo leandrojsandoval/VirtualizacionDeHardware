@@ -1,6 +1,45 @@
+#########################################################
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 5                                  #
+#   Nombre del script: Ejercicio5.ps1                   #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#       Vivas, Pablo Ezequiel               38703964    #
+#                                                       #
+#   Instancia de entrega: Primera Entrega               #
+#                                                       #
+#########################################################
+
+
+<#
+.SYNOPSIS
+Script que facilite la consulta de informacion relacionada a la serie Rick and
+Morty
+
+.DESCRIPTION
+El script permitira buscar informacion de los personajes por su id o su nombre a traves de la api
+https://rickandmortyapi.com/ y pueden enviarse mas de 1 id o nombre. 
+
+.PARAMETER id
+Array de ids. 
+
+.PARAMETER nombre
+Array de nombres. 
+
+.EXAMPLE
+.\Ejercicio5.ps1 -id 1,2
+.\Ejercicio5.ps1 -nombre rick, morty
+.\Ejercicio5.ps1 -id 1,2 -nombre rick,morty
+
+
+#>
 # Función para imprimir la información de un personaje
 param(
-    [string[]]$id
+    [string[]]$id,
+     [string[]]$nombre
 )
 
 function Print-CharacterInfo {
@@ -57,47 +96,50 @@ function Get-CharactersById {
 
 # Función para realizar la búsqueda de personajes por nombre
 function Get-CharactersByName {
-    param (
-        [string]$Names
-    )
+    $Names = $nombre.Split(' ')
 
-    $nameArray = $Names -split ','
-
-    foreach ($name in $nameArray) {
+    foreach ($name in $Names) {
         $filename = "characters_$name.json"
 
         if (Test-Path $filename) {
             $response = Get-Content $filename -Raw
-            Write-Host "cache by name"
             Print-CharacterInfo $response
+            return 
         }
+        
+ 
 
         $url = "https://rickandmortyapi.com/api/character/?name=$name"
-        $response = Invoke-WebRequest $url | Select-Object -ExpandProperty results
-
+        $response = Invoke-WebRequest $url | ConvertFrom-Json
+        
         if ($response.Count -eq 0) {
             Write-Host "Error: No se encontraron resultados para el nombre '$name'."
         }
         else {
-            $response | ConvertTo-Json | Set-Content $filename
-            Print-CharacterInfo ($response | ConvertTo-Json)
+            Write-Host "El count es distinto de cero"
+            $response.results | ConvertTo-Json | Set-Content $filename
+            Print-CharacterInfo ($response.results | ConvertTo-Json)
         }
     }
 }
 
 
-# Verificar si se proporcionaron argumentos
-if (-not ([string]::IsNullOrEmpty($Ids)) -and -not ([string]::IsNullOrEmpty($Names))) {
-    Write-Host "Error: No se pueden proporcionar argumentos -i y -n al mismo tiempo." -ForegroundColor Red
-    exit 1
-}
 
 # Verificar si se proporcionaron IDs y procesarlos
 
- Get-CharactersById $id
+if ([string]::IsNullOrEmpty($id) -eq $false -and [string]::IsNullOrEmpty($nombre) -eq $false){
+      Get-CharactersById $id
+      Get-CharactersByName $nombre
+}else{
 
-
-# Verificar si se proporcionaron nombres y procesarlos
-if ([string]::IsNullOrEmpty($Names) -eq $false) {
-    Get-CharactersByName $Names
+    if ([string]::IsNullOrEmpty($id) -eq $false) {
+  
+        Get-CharactersById $id
+    }
+ 
+    # Verificar si se proporcionaron nombres y procesarlos
+    if ([string]::IsNullOrEmpty($nombre) -eq $false) {
+        Get-CharactersByName $nombre
+    }
 }
+
