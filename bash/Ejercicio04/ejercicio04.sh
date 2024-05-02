@@ -69,7 +69,7 @@ validarParametros() { #directorio -s directoriosalida -p patron
 loop() {
    	while [[ true ]];do
    		inotifywait -r -m -e create -e modify --format "%e "%w%f"" "$1" | while read accion arch;do
-			if [ -f "$arch"];
+			if [ -f "$arch" ];
 			then
 				fecha=$(date +"%Y%m%d-%H%M%S")
 				pathlog="$2/log_$fecha.txt"
@@ -77,15 +77,18 @@ loop() {
 				then
 					path_comprimido="$2/$fecha.tar.gz"
 					touch "$pathlog"
-					tar -czf "$path_comprimido" --files-from /dev/null
-					if grep -q "patron_a_buscar" "$archivo";
-					then
-						echo "El patrón fue encontrado en el archivo: $archivo" >> "$pathlog"
+					tar -cf "$path_comprimido" --files-from /dev/null
+					linea_coincidente=$(grep "$3" "$arch" | head -n 1)
+					if [ -n "$linea_coincidente" ]; then
+						echo "El patrón fue encontrado en el archivo: $arch" >> "$pathlog"
 						cp "$arch" "$2"
-						tar -rf "$path_comprimido" "$2/$(basename "$archivo")"
+						tar -rf "$path_comprimido" "$2/$(basename "$arch")"
+					else
+						echo "No hubo coindidencia alguna con el patrón." >> "$pathlog"
 					fi
+					gzip "$path_comprimido"
 				else
-					echo "$archivo ha sido creado" >> "$pathlog"
+					echo "$arch ha sido creado" >> "$pathlog"
 				fi
 			fi
    		done
@@ -181,81 +184,9 @@ iniciarDemonio() {
 	fi
 }
 
-#esta función solo se ejecutara cuando envie el parametro -k o --kill
-eliminarDemonio() {
-	#Obtenemos todos los demonios creados en anteriores scripts
-	demonios=($(find "$dir_base" -name "*.pid" -type f))
-	if [[ "${#demonios[*]}" == 0 ]];
-	then
-		echo "No hay demonios que eliminar..."
-		exit 1
-	fi
-
-	declare -a vector
-	posvec=0
-	pos=0
-	
-
-	while [ $pos -lt ${#demonios[@]} ];do
-		if [[ "${demonios[$pos]}" =~ .*.pid ]];
-		then
-				cadenas="$cadenas ${demonios[$pos]}"
-				vector[$posvec]="$cadenas"
-				let posvec=$posvec+1
-				cadenas=""
-		else
-			if [[ $pos == 0 ]]
-			then
-				cadenas="${demonios[$pos]}"
-			else
-				cadenas="$cadenas ${demonios[$pos]}"
-			fi
-		fi
-		let pos=$pos+1
-	done
-
-	pos=0
-	while [ $pos -lt ${#vector[*]} ];do
-		str="${vector[$pos]}"
-		aux=${str:0:1}
-		if [[ $aux == " " ]];
-		then
-			str=${str/" "/""}
-			vector[$pos]="$str"
-		fi
-		let pos=$pos+1
-	done
-	
-	
-	inicio=0
-
-	while [ $inicio -ne "${#vector[*]}" ];do
-		cosas=($(ps aux | grep `cat "${vector[$inicio]}"` | grep -v grep))
-		directorio=""
-		num=14
-		while [ "${cosas[$num]}" != "-a" ];do
-			if [ $num == 14 ];
-			then
-				directorio="${cosas[$num]}"
-			else
-				directorio="$directorio ${cosas[$num]}"
-			fi
-			let num=$num+1
-		done
-		psino=($(ps aux | grep "inotifywait" | grep "$directorio"))
-		kill `cat "${vector[$inicio]}"` 2>/dev/null
-		kill "${psino[1]}" 2>/dev/null
-		true > "${vector[$inicio]}"
-		rm "${vector[$inicio]}"
-		let inicio=$inicio+1
-	done
-}
-
-
 eliminarDemonioUnDirectorio() {
     # Directorio a monitorear pasado como argumento
     dir_monitoreado="$1"
-    
     # Obtenemos todos los demonios creados en anteriores scripts
     demonios=($(find "$dir_base" -name "*.pid" -type f))
     
@@ -271,13 +202,21 @@ eliminarDemonioUnDirectorio() {
         # Usamos ps para obtener los detalles del comando que lanzó este pid
         ps_line=$(ps -p $pid -o cmd=)
         
-        # Verificar si la línea del comando contiene el directorio monitoreado
-        if [[ "$ps_line" == *"inotifywait"* && "$ps_line" == *"$dir_monitoreado"* ]]; then
+		# Verificar si la línea del comando contiene el directorio monitoreado
+		if [[ "$ps_line" == *"$dir_monitoreado"* ]]; then
             echo "Eliminando demonio que monitorea: $dir_monitoreado"
             kill $pid 2>/dev/null
             true > "$pid_file"
             rm "$pid_file"
         fi
+		#Obtenemos la informacion correspondiente del inotifywait que se encuentra monitoreando el directorio.
+		cosas=$(ps -eo pid,cmd | grep "inotifywait" | grep "$1")
+		nueva="${cosas:1}"
+		#obtenemos el pid del inotify para posteriormente matar el proceso
+		if [[ $nueva =~ ^([0-9]+) ]]; then
+   			 pidinotify="${BASH_REMATCH[1]}"
+			 kill "$pidinotify" 2>/dev/null
+		fi
     done
 }
 
@@ -296,7 +235,6 @@ mostrarAyuda() {
 nombreScript=$(readlink -f $0)
 dir_base=`dirname "$nombreScript"`
 posi="$1"
-echo "$1"
 if [[ "$1" == "-nohup-" ]]; 
 then
 	shift;	##borra el nohup y corre las demas variables una posición.
@@ -328,6 +266,7 @@ case "$1" in
 				exit 1;
 			fi
 			eliminarDemonioUnDirectorio "$2"
+			#eliminarDemonio
 		else
 			validarParametros "$2" "$3" "$4" "$5" "$6"
 			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
