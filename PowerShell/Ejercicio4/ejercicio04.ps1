@@ -150,7 +150,8 @@ function Global:Monitorear($FullPath,$accion,$Fecha) {
                 #generar ruta zip
                 $ruta_zip="$SAL\$fechaMonitoreo.zip"
             
-                Global:moverAzip $FullPath $ruta_zip $log
+                Global:moverAzip ".\Patron$fechaMonitoreo.txt" $ruta_zip $log
+                #Remove-Item ".\Patron$fechaMonitoreo.txt"
             }
             else{Add-Content "$log" "$Fecha $FullPath no hubo coincidencia alguna."}
         }
@@ -182,7 +183,6 @@ if ($kill) {
 
 $Global:PAT=(Resolve-Path -LiteralPath "$directorio").ToString()
 $Global:nombre = split-path -leaf "$directorio"
-Write-Output "$PAT"
 Get-validardir "$PAT"
 
 $cadena=$PAT.Replace('\','')
@@ -192,7 +192,6 @@ existe -Nom $cadena
 
 $Global:SAL=(Resolve-Path -LiteralPath "$salida").ToString()
 Get-validardir "$SAL"
-Write-Output "$SAL"
 $global:Patron = "$patron"
 
 

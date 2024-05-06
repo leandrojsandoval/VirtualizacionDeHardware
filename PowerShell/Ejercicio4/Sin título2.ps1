@@ -57,31 +57,6 @@ param(
   $archivo
 )
 
-
-function eliminar{
-  $papelera="C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\salida\nombre.zip"
-
-  if(!(Test-Path "$archivo")){
-    Write-Host "Parámetro archivo en función eliminar no es válido"
-    Write-Host "Por favor consulte la ayuda"
-    exit 1
-  }
-  $archivoEliminar=$(Resolve-Path "$archivo");
-
-  if(!(Test-Path "$papelera")){
-    $zip = [System.IO.Compression.ZipFile]::Open("$papelera", "create");
-    $zip.Dispose();
-  }
-
-  $compressionLevel = [System.IO.Compression.CompressionLevel]::Fastest;
-  $zip = [System.IO.Compression.ZipFile]::Open("$papelera", "update");
-  [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, "$archivoEliminar", "$archivoEliminar", $compressionLevel);
-  $zip.Dispose();
-
-  Remove-Item "$archivoEliminar"
-  Write-Host "Archivo eliminado"
-}
-
 function moverAzip{
     Param(
         [string] $archivoAmover,

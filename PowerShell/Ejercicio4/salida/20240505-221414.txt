@@ -1,0 +1,2 @@
+05/05/2024 22:14:14 C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt ha sido modificado
+05/05/2024 22:14:14 C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt no hubo coincidencia alguna.
