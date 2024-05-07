@@ -52,7 +52,7 @@ Get-Help .\ejercicio04.ps1 -Detailed
 Param(
     [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [String] $directorio,
     [Parameter(Mandatory=$false)] [ValidateNotNullOrEmpty()] [String]$salida,
-    [Parameter(Mandatory=$false)] [String] $patron, #la validación de este parametro la haremos únicamente en caso de tener que publicar algo.
+    [Parameter(Mandatory=$false)] [String] $patron,
     [Switch] $kill
 )
 
@@ -66,7 +66,7 @@ function Get-validardir() {
        $resultado=0
     }
     Process{
-        $var=Test-Path -Path "$dir" #valida si existe el directorio devuelve "True" si existe y "False" si no existe
+        $var=Test-Path -Path "$dir"
         if($var -eq "True"){
            $resultado=1
         }
