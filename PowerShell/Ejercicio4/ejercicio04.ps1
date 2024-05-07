@@ -1,17 +1,17 @@
-﻿# =========================== Encabezado =======================
-
-# Nombre del script: ejercicio04.ps1
-# Número de ejercicio: 4
-# Trabajo Práctico: 1
-# Entrega: Primera entrega
-
-# ==============================================================
-
-# ------------------------ Integrantes ------------------------
-# 
-#	Nombre				|	Apellido			|	DNI
-#	Lucas				|	Villegas			|	37.792.844
-# -------------------------------------------------------------
+﻿#########################################################
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 4                                  #
+#   Nombre del script: Ejercicio2.ps1                   #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#       Vivas, Pablo Ezequiel               38703964    #
+#       Villegas, Lucas Ezequiel	        37792844    # 
+#   Instancia de entrega: Primera Entrega               #
+#                                                       #
+#########################################################
 
 <#
 .SYNOPSIS
@@ -180,6 +180,10 @@ if ($kill) {
     exit 1;
 }
 
+if($patron -eq ""){
+    write-output "No se ingresó patron alguno, intente nuevamente."
+    exit 1;
+}
 
 $Global:PAT=(Resolve-Path -LiteralPath "$directorio").ToString()
 $Global:nombre = split-path -leaf "$directorio"
