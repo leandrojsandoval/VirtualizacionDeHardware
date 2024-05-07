@@ -1,14 +1,16 @@
 ﻿#########################################################
 #               Virtualizacion de hardware              #
+#                                                       #
 #   APL1 - Ejercicio 4                                  #
-#   Nombre del script: Ejercicio2.ps1                   #
+#   Nombre del script: Ejercicio4.ps1                   #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
 #       Ocampo, Nicole Fabiana              44451238    #
 #       Sandoval Vasquez, Juan Leandro      41548235    #
 #       Vivas, Pablo Ezequiel               38703964    #
-#       Villegas, Lucas Ezequiel	        37792844    # 
+#       Villegas, Lucas Ezequiel            37792844    #
+#                                                       #
 #   Instancia de entrega: Primera Entrega               #
 #                                                       #
 #########################################################
