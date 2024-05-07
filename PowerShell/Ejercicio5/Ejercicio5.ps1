@@ -44,7 +44,7 @@ param(
      [string[]]$nombre
 )
 
-function Print-CharacterInfo {
+function getInfo {
     param (
         [string]$Response
     )
@@ -71,15 +71,15 @@ function Print-CharacterInfo {
 }
 
 # Función para realizar la búsqueda de personajes por ID
-function Get-CharactersById {
+function getPersonajeId {
 
     $params = $id -join ','
 
-    $filename = "character_$params.json"
+    $filename = "personaje_$params.json"
 
     if (Test-Path $filename) {
         $response = Get-Content $filename -Raw
-        Print-CharacterInfo $response
+        getInfo $response
         return 
     }
 
@@ -93,19 +93,19 @@ function Get-CharactersById {
     }
  
     $response | Set-Content $filename
-    Print-CharacterInfo ($response )
+    getInfo ($response )
 }
 
 # Función para realizar la búsqueda de personajes por nombre
-function Get-CharactersByName {
+function getPersonajeName {
     $Names = $nombre.Split(' ')
 
     foreach ($name in $Names) {
-        $filename = "characters_$name.json"
+        $filename = "personaje_$name.json"
 
         if (Test-Path $filename) {
             $response = Get-Content $filename -Raw
-            Print-CharacterInfo $response
+            getInfo $response
             return 
         }
         
@@ -118,9 +118,8 @@ function Get-CharactersByName {
             Write-Host "Error: No se encontraron resultados para el nombre '$name'."
         }
         else {
-            Write-Host "El count es distinto de cero"
             $response.results | ConvertTo-Json | Set-Content $filename
-            Print-CharacterInfo ($response.results | ConvertTo-Json)
+            getInfo ($response.results | ConvertTo-Json)
         }
     }
 }
@@ -130,18 +129,18 @@ function Get-CharactersByName {
 # Verificar si se proporcionaron IDs y procesarlos
 
 if ([string]::IsNullOrEmpty($id) -eq $false -and [string]::IsNullOrEmpty($nombre) -eq $false){
-      Get-CharactersById $id
-      Get-CharactersByName $nombre
+      getPersonajeId $id
+      getPersonajeName $nombre
 }else{
 
     if ([string]::IsNullOrEmpty($id) -eq $false) {
   
-        Get-CharactersById $id
+        getPersonajeId $id
     }
  
     # Verificar si se proporcionaron nombres y procesarlos
     if ([string]::IsNullOrEmpty($nombre) -eq $false) {
-        Get-CharactersByName $nombre
+        getPersonajeName $nombre
     }
 }
 
