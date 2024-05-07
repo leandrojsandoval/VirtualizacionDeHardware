@@ -21,7 +21,6 @@ function ayuda(){
     echo "DESCRIPCIÓN: Este script recibe archivos y devuelve la cantidad de palabras de cada longitur, la cant de palabras por archivo y la o las palabras con mas caracteres.";
 }
 
-
 # ================================= Controles =================================
 separador=" "
 
@@ -74,8 +73,5 @@ if ! [ -d "$directorio" ]; then
     exit 0;
 fi
 
-
 archivos=$(ls $directorio/*$extension)
-echo "Archivos con la extensión $extension: $archivos"
-awk -v separador="$separador" -f script.awk $archivos
-
+awk -v separador="$separador" -v omitir="$omitir" -f script.awk $archivos

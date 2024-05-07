@@ -1,90 +1,93 @@
-
-BEGIN{
-    print("soy el comienzo de el awk");
-    cantpalabrasTotales=0
-    #cantArchivo=0
-    maxRepeticiones=0;
-    palMAxRepet="";
+BEGIN {
+    cantidadDePalabrasTotales = 0;
+    palabraRepetidaMasVeces = 0;
+    palabrasOmitidasPorArchivo = 0;
+    palMAxRepet = "";
     FS = separador;
+    # Los caracteres que llegan para omitir, los spliteo armando el array de caracteres
+    split(omitir, caracteresOmision, "");
 }
 
 {
-        #  if (index($i, caracter_omitir) == 0) {
-        #      print NF;
-        #      cantpalabrasTotales+=NF;
-        #  }
-        cantpalabrasTotales+=NF;
-		
-}
-{
-	for(i=1; i<=NF;i++){
-        gsub("\\.", "", $0);
-        gsub(",", "", $0);
-        gsub("\r", "", $0);
-        gsub("\n", "", $0)
-		longPal=length($i);
-        #printf("longitd de la palabra es %d\t", longPal)
-		cantXLongitud[longPal]++;
-	}
-}
-{
-    for(i=1; i<=NF; i++){
-        palabras[$i]++;
-    }
-
-}
-{
-     for (i = 1; i <= length($0); i++) {
-        if(substr($0, i, 1)!= " "){
-            char_count[substr($0, i, 1)]++;
-        }
-     }
-
- }
-
-
-END{
+	cantidadDePalabrasTotales += NF;
     
+    for(i = 1; i <= NF; i++){
 
-    printf("La cantidad de palabras totales en el texto son: %d\n", cantpalabrasTotales);
-    for(cantCaracteres in cantXLongitud){
-		printf("Palabras con longitud (%d): => %d \n",cantCaracteres, cantXLongitud[cantCaracteres]);
+        # Elimino caracteres de puntuación y de salto de línea
+        gsub("\\.|,|\r|\n", "", $i);
+
+		longitudPalabra = length($i);
+
+        if (longitudPalabra > 0) {
+
+            # Bandera para verificar si lo tengo que omitir o no
+            incluirPalabra = 1;
+
+            # Lo busco en el array de caracteres omitidos si la palabra contiene esa letra
+            for (j = 1; j <= length(caracteresOmision); j++) {
+                if (index($i, caracteresOmision[j]) > 0) {
+                    incluirPalabra = 0;
+                    palabrasOmitidasPorArchivo++;
+                    break;
+                }
+            }
+
+            # Si lo tengo que incluir, lo agrego al array e incremento la cantidad de ocurrencias
+            if (incluirPalabra) {
+                cantidadPorLongitud[longitudPalabra]++;
+                palabras[$i]++;
+            }
+        }
+
 	}
-    printf("\n\n");
 
-    # for(clave in palabras){
-    #     printf("La palabra (%s) se repitio: %d veces \n",clave, palabras[clave]);
-    # }
-
-
-    for(clave in palabras){
-        if(palabras[clave] > maxRepeticiones){
-            maxRepeticiones=palabras[clave];
-            palMAxRepet=clave;
+    # Recuento de caracteres
+    for (i = 1; i <= length($0); i++) {
+        if(substr($0, i, 1) != " "){
+            contadorDeCaracteres[substr($0, i, 1)]++;
         }
     }
+
+}
+
+END {
+
+    printf("La cantidad de palabras totales en el texto son: %d\n", cantidadDePalabrasTotales);
+    printf("La cantidad de palabras omitidas en el texto son: %d\n", palabrasOmitidasPorArchivo);
+    printf("Palabras validas a contabilidar: %d\n", cantidadDePalabrasTotales - palabrasOmitidasPorArchivo);
+
+    for(cantidadCaracteres in cantidadPorLongitud) {
+		printf("Palabras con longitud (%d): => %d \n",cantidadCaracteres, cantidadPorLongitud[cantidadCaracteres]);
+	}
+
+    printf("\n");
+
+    for(clave in palabras) {
+        if(palabras[clave] > palabraRepetidaMasVeces){
+            palabraRepetidaMasVeces = palabras[clave];
+            palMAxRepet = clave;
+        }
+    }
+
     printf("Las palabras mas repetidas son: \n");
-    for(clave in palabras){
-        if(maxRepeticiones==palabras[clave]){
-            printf(" %s\n", clave);
+    for(palabra in palabras) {
+        if(palabraRepetidaMasVeces == palabras[palabra]){
+            printf("\t%s\n", palabra);
         }
     }
-    #printf("La palabra mas repetida es: %s con %d repeticiones\n", palMAxRepet, maxRepeticiones);
-    print(cantArchivo);
-	palPromxArchivo=cantpalabrasTotales/(ARGC -1);
-	printf("el promedio de palabras por archivo es: %d\n\n\n", palPromxArchivo);
-
-    max_char = "";
-    max_count = 0;
-    for (char in char_count) {
-        if (char_count[char] > max_count) {
-            max_char = char;
-            max_count = char_count[char];
-        }
-    }
-    print "El caracter más repetido es '" max_char "' con " max_count " ocurrencias.";
-
     
+	promedioPalabrasPorArchivo = (cantidadDePalabrasTotales - palabrasOmitidasPorArchivo) / (ARGC -1);
+	printf("El promedio de palabras por archivo es: %d\n", promedioPalabrasPorArchivo);
+    caracterMasRepetido = "";
+    ocurrenciasCaracterMasRepetido = 0;
+
+    for (caracter in contadorDeCaracteres) {
+        if (contadorDeCaracteres[caracter] > ocurrenciasCaracterMasRepetido) {
+            caracterMasRepetido = caracter;
+            ocurrenciasCaracterMasRepetido = contadorDeCaracteres[caracter];
+        }
+    }
+
+    print "El caracter más repetido es '" caracterMasRepetido "' con " ocurrenciasCaracterMasRepetido " ocurrencias.";
+
 }
-
-

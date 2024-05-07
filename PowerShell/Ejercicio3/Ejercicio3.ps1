@@ -48,8 +48,6 @@ Consideraciones:
 • Se asume que no hay caracteres a omitir por defecto
 #>
 
-
-
 Param(
     [Parameter(Mandatory=$true, Position=1)]
     [string]$Directorio,
@@ -65,89 +63,97 @@ Param(
 
     [Parameter(Mandatory=$false)]
     [char]$omitir
-    
 )
 
 # Verificar si el directorio existe
 if (!(Test-Path $Directorio -PathType Container)) {
-    Write-Host "El directorio especificado no existe."
-    exit
+    Write-Host "El directorio especificado no existe.";
+    exit;
 }
 
 if (-not $separador) {
-    $separador = " "
+    $separador = " ";
 }
 
-#conteo global
-$conteoGlobal = @{}
-$conteoCaracteres = @{}
-$conteoPalabras = @{}
+# Conteo global
+$conteoGlobal = @{};
+$conteoCaracteres = @{};
+$conteoPalabras = @{};
 
 # Obtener la lista de archivos de texto en el directorio
-$Archivos = Get-ChildItem -Path $Directorio -File -Filter "*$extension"
+$archivos = Get-ChildItem -Path $Directorio -File -Filter "*$extension";
 
 $cantidadArchivos=0;
 $cantidadPalTotales=0;
+
 # Iterar sobre cada archivo de texto
-foreach ($Archivo in $Archivos) {
+foreach ($archivo in $archivos) {
+
     # Leer el contenido del archivo
-    $Contenido = Get-Content $Archivo.FullName
+    $Contenido = Get-Content $archivo.FullName;
     $cantidadArchivos++;
-    $contenido=$contenido -replace '\.', ''
-    $palabras=$contenido -split $separador
+    $contenido=$contenido -replace '\.', '';
+    $palabras=$contenido -split $separador;
+
     foreach ($palabra in $palabras) {
+
         $longitud = $palabra.Length
+
         if ($conteoGlobal.ContainsKey($longitud)) {
-            $conteoGlobal[$longitud] += 1
+            $conteoGlobal[$longitud] += 1;
         } else {
-            $conteoGlobal[$longitud] = 1
+            $conteoGlobal[$longitud] = 1;
         }
+
         # Contar los caracteres y actualizar el conteo global
-        $caracteres = $palabra.ToCharArray()
+        
+        $caracteres = $palabra.ToCharArray();
+        
         foreach ($caracter in $caracteres) {
             if ($conteoCaracteres.ContainsKey($caracter)) {
-                $conteoCaracteres[$caracter] += 1
+                $conteoCaracteres[$caracter] += 1;
             } else {
-                $conteoCaracteres[$caracter] = 1
+                $conteoCaracteres[$caracter] = 1;
             }
         }
+
         # Contar las palabras y actualizar el conteo global
         if ($conteoPalabras.ContainsKey($palabra)) {
-            $conteoPalabras[$palabra] += 1
+            $conteoPalabras[$palabra] += 1;
         } else {
-            $conteoPalabras[$palabra] = 1
+            $conteoPalabras[$palabra] = 1;
         }
+
     }
+
     # Contar las palabras en el contenido del archivo
-    $NumeroPalabras = ($Contenido -split '\s+').Count
-    $cantidadPalTotales+=$NumeroPalabras
+    $NumeroPalabras = ($Contenido -split '\s+').Count;
+    $cantidadPalTotales+=$NumeroPalabras;
 }
+
 # Mostrar el conteo global de palabras de cada longitud
 foreach ($longitud in $conteoGlobal.Keys) {
-    $cantidad = $conteoGlobal[$longitud]
-    Write-Host "Palabras de longitud $longitud :  esta $cantidad veces"
+    $cantidad = $conteoGlobal[$longitud];
+    Write-Host "Palabras de longitud $longitud :  esta $cantidad veces";
 }
-
 
 # Encontrar la palabra o palabras más repetidas
-$palabrasMasRepetidas = @()
-$maxRepeticiones = ($conteoPalabras.GetEnumerator() | Sort-Object -Property Value -Descending)[0].Value
+$palabrasMasRepetidas = @();
+$maxRepeticiones = ($conteoPalabras.GetEnumerator() | Sort-Object -Property Value -Descending)[0].Value;
+
 foreach ($palabra in $conteoPalabras.Keys) {
     if ($conteoPalabras[$palabra] -eq $maxRepeticiones) {
-        $palabrasMasRepetidas += $palabra
+        $palabrasMasRepetidas += $palabra;
     }
 }
+
 Write-Host "La palabra o palabras más repetidas son: $($palabrasMasRepetidas -join ', ')"
 
 # Encontrar el carácter más repetido
-$caracterMasRepetido = ($conteoCaracteres.GetEnumerator() | Sort-Object -Property Value -Descending)[0].Key
-$cantidadRepeticiones = $conteoCaracteres[$caracterMasRepetido]
-Write-Host "El carácter más repetido es '$caracterMasRepetido' con $cantidadRepeticiones repeticiones."
+$caracterMasRepetido = ($conteoCaracteres.GetEnumerator() | Sort-Object -Property Value -Descending)[0].Key;
+$cantidadRepeticiones = $conteoCaracteres[$caracterMasRepetido];
+Write-Host "El carácter más repetido es '$caracterMasRepetido' con $cantidadRepeticiones repeticiones.";
 
-Write-Host "La cantidad total de palabras de los archivos es: $cantidadPalTotales"
-$promPalArch=$cantidadPalTotales/$cantidadArchivos
-Write-Output "El promedio de palabras por archivo es: $promPalArch"
-
-
-
-
+Write-Host "La cantidad total de palabras de los archivos es: $cantidadPalTotales";
+$promPalArch = $cantidadPalTotales / $cantidadArchivos;
+Write-Output "El promedio de palabras por archivo es: $promPalArch";
