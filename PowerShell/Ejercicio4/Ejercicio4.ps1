@@ -154,7 +154,6 @@ function Global:Monitorear($FullPath,$accion,$Fecha) {
                 $ruta_zip="$SAL\$fechaMonitoreo.zip"
             
                 Global:moverAzip ".\Patron$fechaMonitoreo.txt" $ruta_zip $log
-                #Remove-Item ".\Patron$fechaMonitoreo.txt"
             }
             else{Add-Content "$log" "$Fecha $FullPath no hubo coincidencia alguna."}
         }
