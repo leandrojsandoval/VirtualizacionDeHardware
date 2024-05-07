@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# =========================== Encabezado =======================
-
-# Nombre del script: Ejercicio4.sh
-# Número de ejercicio: 4
-# Trabajo Práctico: 1
-# Entrega: Primera entrega
-
-# ==============================================================
-
-# ------------------------ Integrantes ------------------------
-# 
-#
-# -------------------------------------------------------------
+#########################################################
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 1                                  #
+#   Nombre del script: Ejercicio1.sh                    #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#       Villegas, Lucas Ezequiel			37792844    #
+#   Instancia de entrega: Primera Entrega               #
+#                                                       #
+#########################################################
 
 validarParametros() { #directorio -s directoriosalida -p patron
 	if [ ! -d "$1" ];
@@ -90,7 +90,7 @@ loop() {
 						fi
 						rm "$pathAuxPatron"
 					else					
-						echo "No hubo coindidencia alguna con el patrón." >> "$pathlog"
+						echo "No hubo coindidencia alguna con el patrón $3." >> "$pathlog"
 					fi
 				else
 					echo "$arch ha sido creado" >> "$pathlog"
@@ -244,7 +244,7 @@ case "$1" in
 	else
 			#por aqui pasa la segunda
 			#-d dirMonitoreo DirSalida patron
-			iniciarDemonio "$1" "$2" "$4" "$5"
+			iniciarDemonio "$1" "$2" "$4" "$6"
 	fi
     ;;
   '-h' | '--help' | '-?')

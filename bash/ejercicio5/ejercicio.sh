@@ -1,3 +1,17 @@
+#########################################################
+#               Virtualizacion de hardware              #
+#   APL1 - Ejercicio 5                                  #
+#   Nombre del script: Ejercicio1.sh                    #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#       Villegas, Lucas Ezequiel			37792844    #
+#   Instancia de entrega: Primera Entrega               #
+#                                                       #
+#########################################################
+
 # Función para imprimir la información de un personaje
 print_character_info() {
     local response=$1
