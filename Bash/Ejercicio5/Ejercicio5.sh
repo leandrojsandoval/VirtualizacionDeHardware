@@ -1,3 +1,4 @@
+#!/bin/bash
 #########################################################
 #               Virtualizacion de hardware              #
 #                                                       #
@@ -15,9 +16,8 @@
 #   Instancia de entrega: Primera Entrega               #
 #                                                       #
 #########################################################
-
 # Función para imprimir la información de un personaje
-print_character_info() {
+getInfo() {
     local response=$1
     local length=$(echo "$response" | jq '. | length')
 
@@ -34,33 +34,40 @@ print_character_info() {
 }
 
 
+mostrarAyuda() {
+	echo "Modo de uso: bash $0 [-i | --id] ["1,2,3"] [ -n | --nombre ] ["rick, morty"]"
+	echo ""
+	echo "Uso de api y caches json"
+	echo "-i | --id	indica los ids a consultar"
+	echo "-n | --nombre indica los nombres a consultar."
+
+}
 
 # Función para verificar si un personaje con un ID específico está en caché
-character_in_cache_by_id() {
+PersonajeCacheId() {
     local id=$1
-    local filename="character_$id.json"
+    local filename="personaje_$id.json"
     if [[ -f "$filename" ]]; then
         local response=$(cat "$filename")
-        print_character_info "$response"
+        getInfo "$response"
     fi
 }
 
 # Función para verificar si un personaje con un nombre específico está en caché
-character_in_cache_by_name() {
+PersonajeCacheName() {
     local name=$1
-    local filename="characters_$name.json"
+    local filename="personaje_$name.json"
     if [[ -f "$filename" ]]; then
         local response=$(cat "$filename")
-        echo "cache by name"
-        print_character_info "$response"
+        getInfo "$response"
     fi
 }
 
 # Función para realizar la búsqueda HTTP de personajes por ID
-get_characters_by_id() {
+PersonajeId() {
     local ids=$1
 
-    character_in_cache_by_id $ids
+    PersonajeCacheId $ids
     local url="https://rickandmortyapi.com/api/character/$ids"
     local response=$(wget -qO- "$url")
 
@@ -68,13 +75,14 @@ get_characters_by_id() {
         echo "Error: No se encontraron personajes con los IDs proporcionados."
         exit 1
     fi
-     echo "$response" > "character_$ids.json"
-    print_character_info "$response"
+     echo "$response" > "personaje_$ids.json"
+    getInfo "$response"
 }
 
 # Función para realizar la búsqueda HTTP de personajes por nombre
-get_characters_by_name() {
+PersonajeName() {
     local names=$1
+    PersonajeCacheName $names
     IFS=',' read -r -a name_array <<< "$names"
     for name in "${name_array[@]}"; do
        # character_in_cache_by_name $name
@@ -87,11 +95,11 @@ get_characters_by_name() {
         if [[ $length -eq 0 ]]; then
             echo "Error: No se encontraron resultados para el nombre '$name'."
         else
-            echo "$response"> "characters_$name.json"
-            print_character_info "$response"
+            echo "$response"> "personaje_$name.json"
+            getInfo "$response"
         fi
     done
-
+}
 # Analizar los argumentos de línea de comandos
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -102,6 +110,10 @@ while [[ $# -gt 0 ]]; do
         -n|--nombre)
             names="$2"
             shift 2
+            ;;
+         '-h' | '--help' | '-?')
+            mostrarAyuda
+            exit 1
             ;;
         *)
             echo "Error: Opción inválida $1" >&2
@@ -118,10 +130,10 @@ fi
 
 # Verificar si se proporcionaron IDs y procesarlos
 if [ -n "$ids" ]; then
-    get_characters_by_id "$ids"
+    PersonajeId "$ids"
 fi
 
 # Verificar si se proporcionaron nombres y procesarlos
 if [ -n "$names" ]; then
-    get_characters_by_name "$names"
+    PersonajeName "$names"
 fi
