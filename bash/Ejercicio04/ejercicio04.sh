@@ -2,8 +2,8 @@
 
 #########################################################
 #               Virtualizacion de hardware              #
-#   APL1 - Ejercicio 1                                  #
-#   Nombre del script: Ejercicio1.sh                    #
+#   APL1 - Ejercicio 4                                  #
+#   Nombre del script: ejercicio04.sh                    #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
