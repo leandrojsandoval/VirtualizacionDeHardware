@@ -38,6 +38,7 @@ declare ERROR_PARAMETROS_INVALIDOS=1;
 declare ERROR_ARGUMENTO_DESCONOCIDO=2;
 declare ERROR_DIRECTORIO=3;
 declare ERROR_ARCHIVO_SALIDA_Y_PANTALLA=4;
+declare ERROR_DIRECTORIO_SIN_ARCHIVOS=5;
 
 # ================================= Funciones =================================
 
@@ -173,6 +174,11 @@ function armarArchivoJson() {
 }
 
 function main() {
+
+    if ! ls "$directorioEntrada"/*.csv &>/dev/null; then
+        echo "ERROR: No se encontraron archivos CSV en el directorio especificado.";
+        exit $ERROR_DIRECTORIO_SIN_ARCHIVOS;
+    fi
     
     for archivoCSV in "$directorioEntrada"/*.csv; do
 
