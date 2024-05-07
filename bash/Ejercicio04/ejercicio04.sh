@@ -45,7 +45,7 @@ validarParametros() { #directorio -s directoriosalida -p patron
 
 	if [ ! -w "$3" ];
 	then
-		echo "Error: sin permisos de lectura en directorio de salida"
+		echo "Error: sin permisos de escritura en directorio de salida"
 		mostrarAyuda
 		exit 1;
 	fi
@@ -74,21 +74,24 @@ loop() {
 			then
 				fecha=$(date +"%Y%m%d-%H%M%S")
 				pathlog="$2/log_$fecha.txt"
+				touch "$pathlog"
 				if [[ "$accion" == "MODIFY" ]]
 				then
 					path_comprimido="$2/$fecha.tar.gz"
-					touch "$pathlog"
-					tar -cf "$path_comprimido" --files-from /dev/null
 					linea_coincidente=$(grep -n "$3" "$arch")
 					if [ -n "$linea_coincidente" ]; then
-						echo "El patrón fue encontrado en el archivo: $arch cuya coincidencia fue $linea_coincidente" >> "$pathlog"
-						cp "$arch" "$2"
-						tar -rf "$path_comprimido" "$2/$(basename "$arch")"
+						echo "El patrón fue encontrado en el archivo: $arch la coincidencia se ha guardado en $path_comprimido" >> "$pathlog"
+						pathAuxPatron="$2/coincidencia$fecha.txt"
+						echo "$linea_coincidente" >> "$pathAuxPatron"
+						if [ ! -f "$path_comprimido" ]; then
+    						tar -cvzf "$path_comprimido" "$pathAuxPatron" >/dev/null
+						else
+   							tar -rvzf "$path_comprimido" "$pathAuxPatron" >/dev/null
+						fi
+						rm "$pathAuxPatron"
 					else					
 						echo "No hubo coindidencia alguna con el patrón." >> "$pathlog"
-						tar -rf "$path_comprimido" "$2/$(basename "$pathlog")"
 					fi
-					gzip "$path_comprimido"
 				else
 					echo "$arch ha sido creado" >> "$pathlog"
 				fi

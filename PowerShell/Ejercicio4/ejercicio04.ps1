@@ -180,6 +180,11 @@ if ($kill) {
     exit 1;
 }
 
+if($salida -eq ""){
+    write-output "No se ingresó directorio de salida, intente nuevamente."
+    exit 1;
+}
+
 if($patron -eq ""){
     write-output "No se ingresó patron alguno, intente nuevamente."
     exit 1;
