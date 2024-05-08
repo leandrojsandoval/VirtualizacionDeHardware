@@ -1,0 +1,1 @@
+C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt:1:holaholaasdasdas C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt:2:asdsadashola C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt:3:asdasdholaasdasd

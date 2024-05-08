@@ -1,0 +1,2 @@
+05/07/2024 21:08:37 C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\buenas.txt ha sido modificado
+el patron ha sido encontrado y se insertara en: C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\salida\Zip20240507-210837.zip.

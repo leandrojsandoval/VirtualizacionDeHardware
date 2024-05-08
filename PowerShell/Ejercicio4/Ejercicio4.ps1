@@ -104,32 +104,29 @@ function noExiste() {
         exit 1
     }
 }
-
+#esta funcion debe recibir el path absoluto del zip
 function Global:moverAzip {
     Param(
         [string] $archivoAmover,
         [string] $archivoZip,
         [string] $log
     )
-
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
     if (!(Test-Path "$archivoAmover")) {
         Add-Content "$log" "$archivoAmover es inválido."
         exit 1
     }
-
     $archivoMoverNombre = [System.IO.Path]::GetFileName($archivoAmover)
     $archivoMoverRutaAbs = $(Resolve-Path "$archivoAmover")
-
     # Si no existe el archivo zip, lo crea.
     if (!(Test-Path "$archivoZip")) {
-        $zip = [System.IO.Compression.ZipFile]::Open("$archivoZip", "create")
-        $zip.Dispose()
+        $zip = [System.IO.Compression.ZipFile]::Open("$archivoZip", "create");
+        $zip.Dispose();
     }
-
     $compressionLevel = [System.IO.Compression.CompressionLevel]::Fastest
-    $zip = [System.IO.Compression.ZipFile]::Open("$archivoZip", "update")
-    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, "$archivoMoverRutaAbs", "$archivoMoverNombre", $compressionLevel)
-    $zip.Dispose()
+    $zip = [System.IO.Compression.ZipFile]::Open("$archivoZip", "update");
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, "$archivoMoverRutaAbs", "$archivoMoverNombre", "Fastest");
+    $zip.Dispose();
 
     Remove-Item "$archivoAmover"
 }
@@ -149,11 +146,12 @@ function Global:Monitorear($FullPath,$accion,$Fecha) {
             $matcheo=Select-String -Path "$FullPath" -Pattern $Patron
             if($matcheo){
                 #añadiendo contenido dentro de un archivo
-                Add-Content ".\Patron$fechaMonitoreo.txt" "$matcheo"
+                Add-Content "$SAL\Patron$fechaMonitoreo.txt" "$matcheo"
                 #generar ruta zip
-                $ruta_zip="$SAL\$fechaMonitoreo.zip"
-            
-                Global:moverAzip ".\Patron$fechaMonitoreo.txt" $ruta_zip $log
+                $ruta_zip="$SAL\Zip$fechaMonitoreo.zip"
+                Add-Content "$log" "el patron ha sido encontrado y se insertara en: $ruta_zip."
+                Global:moverAzip "$SAL\Patron$fechaMonitoreo.txt" "$ruta_zip" "$log"
+                Add-Content "$log" "$Fecha $SAL\Patron$fechaMonitoreo.txt se comprimió en el zip $ruta_zip."
             }
             else{Add-Content "$log" "$Fecha $FullPath no hubo coincidencia alguna."}
         }
@@ -170,6 +168,7 @@ if ($kill) {
     $directorioAEliminar=split-path -leaf "$directorio"
     $cadena=$directorioAEliminar.Replace('\','')
     noExiste -Nom $cadena
+    Get-EventSubscriber -ErrorAction SilentlyContinue | Where-Object { $_.SourceIdentifier -match "$directorioAEliminar" } | ForEach-Object { Unregister-Event -SourceIdentifier $_.SourceIdentifier }
     Get-Job -erroraction 'silentlycontinue' | Select-Object Name | Where-Object { $_.Name -match "$directorioAEliminar" } | ForEach-Object { remove-job -force -Name $_.Name }
     if (Test-Path -Path "./$directorioAEliminar.txt" -PathType Leaf) {
         get-content -path "./$directorioAEliminar.txt"

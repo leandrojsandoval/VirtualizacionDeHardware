@@ -1,0 +1,3 @@
+05/07/2024 21:54:52 C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\monitor\holanda.txt ha sido modificado
+el patron ha sido encontrado y se insertara en: C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\salida\Zip20240507-215452.zip.
+05/07/2024 21:54:52 C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\salida\Patron20240507-215452.txt se comprimió en el zip C:\Users\pc\Desktop\GitPibes\VirtualizacionDeHardware-UNLaM\Powershell\Ejercicio4\salida\Zip20240507-215452.zip.
