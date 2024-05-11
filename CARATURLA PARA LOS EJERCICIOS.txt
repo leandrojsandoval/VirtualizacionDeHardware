@@ -1,8 +1,9 @@
+/*
 #########################################################
 #               Virtualizacion de hardware              #
 #                                                       #
 #   APL2 - Ejercicio X                                  #
-#   Nombre del script: EjercicioX.sh                    #
+#   Nombre del script: EjercicioX.cpp                   #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
@@ -15,3 +16,4 @@
 #   Instancia de entrega: Primera Entrega               #
 #                                                       #
 #########################################################
+*/
