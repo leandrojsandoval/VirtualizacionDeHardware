@@ -27,6 +27,15 @@
 using namespace std;
 
 const int ERROR_CREACION_FORK = -1;
+const int CREACION_EXITOSA = 0;
+
+const int SEGUNDOS_ESPERA_PROCESO_PADRE = 10;
+const int SEGUNDOS_ESPERA_PROCESOS_HIJOS = 15;
+const int SEGUNDOS_ESPERA_PROCESOS_NIETOS = 10;
+const int SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS = 20;
+
+const int SEGUNDOS_ESPERA_PROCESOS_ZOMBIES = 5;
+const int SEGUNDOS_ESPERA_PROCESOS_DEMONIOS = 5;
 
 void ayuda ()
 {
@@ -68,8 +77,8 @@ void esperarTeclaUsuario ()
     getchar();
 }
 
-void informarProcesoActual (string nombreProceso) {
-    cout << "Soy el proceso " << nombreProceso << " con PID " << getpid() << ", mi padre es " << getppid() << endl; 
+void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre) {
+    cout << "Soy el proceso " << nombreProceso << " con PID " << idProceso << ", mi padre es " << idProcesoPadre << endl; 
 }
 
 int main (int argc, char* argv[])
@@ -84,72 +93,91 @@ int main (int argc, char* argv[])
         }
     }
     
-    informarProcesoActual("Padre");
+    informarProcesoActual("Padre", getpid(), getppid());
+    sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
     
-    if(crearFork() == 0)
+    if(crearFork() == CREACION_EXITOSA)
     {
-        if (crearFork() == 0)
+        informarProcesoActual("Hijo 1", getpid(), getppid());
+        sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
+
+        if (crearFork() == CREACION_EXITOSA)
         {
-            informarProcesoActual("Nieto 1");
+            informarProcesoActual("Nieto 1", getpid(), getppid());
+            sleep(SEGUNDOS_ESPERA_PROCESOS_NIETOS);
         } 
         else
         {
-            informarProcesoActual("Hijo 1");
-
-            if(crearFork() == 0)
+            if(crearFork() == CREACION_EXITOSA)
             {
-                informarProcesoActual("Nieto 2");
+                informarProcesoActual("Nieto 2", getpid(), getppid());
+                sleep(SEGUNDOS_ESPERA_PROCESOS_NIETOS);
             }
             else
             {
-                if(crearFork() == 0)
+                if(crearFork() == CREACION_EXITOSA)
                 {                    
-                    informarProcesoActual("Nieto 3"); 
+                    informarProcesoActual("Nieto 3", getpid(), getppid());
 
-                    if (crearFork() == 0)
+                    if (crearFork() == CREACION_EXITOSA)
                     {
-                        informarProcesoActual("Biznieto");
+                        informarProcesoActual("Biznieto", getpid(), getppid());
+                        sleep(SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS);
                     }
                     else
                     {
-                        wait(NULL);     // Espero a Biznieto
+                        // Espero a Biznieto
+                        wait(NULL);
                     }
                 }
                 else
                 {
-                    wait(NULL);         // Espero a Nieto 3 
+                    // Espero a Nieto 3
+                    wait(NULL);
                 }
+                // Espero a Nieto 2
+                wait(NULL);
             }
-            wait(NULL);                 // Espero a Nieto 2
+            // Espero a Nieto 1
+            wait(NULL);
         }
-        wait(NULL);                     // Espero a Nieto 1
     }
     else
     {
-        if(crearFork() == 0)
+        if(crearFork() == CREACION_EXITOSA)
         {
-            informarProcesoActual("Zombie"); 
+            informarProcesoActual("Zombie", getpid(), getppid()); 
+            sleep(SEGUNDOS_ESPERA_PROCESOS_ZOMBIES);
+            exit(0);
         }
         else
         {
-            if (crearFork() == 0)
+            if (crearFork() == CREACION_EXITOSA)
             {
-                informarProcesoActual("Hijo 3"); 
+                informarProcesoActual("Hijo 3", getpid(), getppid());
+                sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
                 
-                if (crearFork() == 0)
+                if (crearFork() == CREACION_EXITOSA)
                 {
-                    informarProcesoActual("Demonio"); 
+                    informarProcesoActual("Demonio", getpid(), getppid());
+                    sleep(SEGUNDOS_ESPERA_PROCESOS_DEMONIOS);
                     setsid();
+                    chdir("/");
                 }
                 // No hay else ya que al proceso hijo lo saque de la sesion, por lo tanto Hijo 3 no tiene que esperar a nadie
             }
             else
             {
-                wait(NULL);             // Espero a Hijo 3
+                // Espero a Hijo 3
+                wait(NULL);
+                // Espero a Hijo 1
+                wait(NULL);
+                wait(NULL);
+                // No realizo un wait al proceso Zombie (Hijo 2)
+                sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
                 esperarTeclaUsuario();
             }
         }
-        // No realizo un wait al proceso Zombie (Hijo 2)
     }
     return EXIT_SUCCESS;
 }
