@@ -59,6 +59,11 @@ param(
     [switch]$pantalla
 )
 
+# Verificar que solo se haya proporcionado una opción de salida o ninguna
+if (($PSBoundParameters.ContainsKey('salida') -and $pantalla) -or (-not $PSBoundParameters.ContainsKey('pantalla') -and -not $salida)) {
+    Write-Host "ERROR: Debe especificar la opción de pantalla (-p | --pantalla) o la opción de salida (-s | --salida), pero no ambas y no ninguna."
+    exit 1
+}
 
 # Función para calcular la nota final de un alumno en una materia
 function CalcularNota($notas) {
