@@ -245,6 +245,3 @@ if [[ "$separador" =~ [0-9] ]] || [[ "$separador" == "-" ]] || [[ "$separador" =
 fi
 
 multiplicar_matrices "$matriz1" "$matriz2" "$separador"
-
-
-
