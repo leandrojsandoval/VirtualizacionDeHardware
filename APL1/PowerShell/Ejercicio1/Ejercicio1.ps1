@@ -90,10 +90,10 @@ foreach ($archivo in Get-ChildItem -Path $directorio -Filter *.csv) {
     $materia = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name)
 
     # Validar si 'materia' es un número
-    if (-not [int]::TryParse($materia, [ref]$null)) {
-        Write-Output "La siguiente materia no pudo ser procesada debido a que se proporciono un id incorrecto: $materia"
-        continue
-    }
+    #if (-not [int]::TryParse($materia, [ref]$null)) {
+    #    Write-Output "La siguiente materia no pudo ser procesada debido a que se proporciono un id incorrecto: $materia"
+    #    continue
+    #}
 
     #Se lee el contenido del archivo CSV usando Get-Content y se omite la primera línea ( los encabezados) usando Select-Object -Skip 1.
     $contenido = Get-Content $archivo.FullName | Select-Object -Skip 1 
@@ -125,7 +125,7 @@ foreach ($archivo in Get-ChildItem -Path $directorio -Filter *.csv) {
 
         # Agrega la nota de la materia al alumno
         $materia_nota = New-Object PSObject -Property @{
-            "materia" = [int]$materia
+            "materia" = $materia
             "nota" =  $nota_final
         }
         #Write-Output $materia_nota

@@ -4,19 +4,23 @@
       "notas": [
         {
           "nota": 7.0,
-          "materia": 1114
+          "materia": "1114"
         },
         {
           "nota": 7.0,
-          "materia": 1115
-        },
-        {
-          "nota": 7.0,
-          "materia": 1116
+          "materia": "1116"
         },
         {
           "nota": 9.0,
-          "materia": 1117
+          "materia": "1117"
+        },
+        {
+          "nota": 7.0,
+          "materia": "BaseDeDatos"
+        },
+        {
+          "nota": 9.0,
+          "materia": "sisop"
         }
       ],
       "dni": "30300300"
@@ -25,11 +29,11 @@
       "notas": [
         {
           "nota": 4.0,
-          "materia": 1114
+          "materia": "1114"
         },
         {
           "nota": 4.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "40400400"
@@ -38,11 +42,11 @@
       "notas": [
         {
           "nota": 9.0,
-          "materia": 1114
+          "materia": "1114"
         },
         {
           "nota": 10.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "50500500"
@@ -51,11 +55,11 @@
       "notas": [
         {
           "nota": 6.0,
-          "materia": 1114
+          "materia": "1114"
         },
         {
           "nota": 6.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "90900900"
@@ -63,16 +67,20 @@
     {
       "notas": [
         {
-          "nota": 6.0,
-          "materia": 1115
-        },
-        {
           "nota": 8.0,
-          "materia": 1116
+          "materia": "1116"
         },
         {
           "nota": 9.0,
-          "materia": 1117
+          "materia": "1117"
+        },
+        {
+          "nota": 6.0,
+          "materia": "BaseDeDatos"
+        },
+        {
+          "nota": 9.0,
+          "materia": "sisop"
         }
       ],
       "dni": "10100100"
@@ -80,16 +88,20 @@
     {
       "notas": [
         {
+          "nota": 9.0,
+          "materia": "1116"
+        },
+        {
+          "nota": 9.0,
+          "materia": "1117"
+        },
+        {
           "nota": 6.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         },
         {
           "nota": 9.0,
-          "materia": 1116
-        },
-        {
-          "nota": 9.0,
-          "materia": 1117
+          "materia": "sisop"
         }
       ],
       "dni": "20200200"
@@ -98,7 +110,7 @@
       "notas": [
         {
           "nota": 5.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "60600600"
@@ -107,7 +119,7 @@
       "notas": [
         {
           "nota": 0.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "70700700"
@@ -116,7 +128,7 @@
       "notas": [
         {
           "nota": 6.0,
-          "materia": 1115
+          "materia": "BaseDeDatos"
         }
       ],
       "dni": "80800800"
