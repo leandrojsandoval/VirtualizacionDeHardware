@@ -22,7 +22,7 @@
 
 # Variables en donde se van a almacenar los parametros de entrada
 declare directorioEntrada="";
-declare directorioSalida="";
+declare rutaArchivoSalida="";
 declare mostrarPorPantalla=false;
 
 # Vector asociativo en donde se van a guardar las notas finales
@@ -30,9 +30,6 @@ declare -A vectorNotas;
 
 # Variable en formato JSON para guardar en el archivo de salida o mostrarlo por pantalla
 declare jsonData=$(jq -n '{ "notas": [] }');
-
-# Nombre del archivo de salida
-declare ARCHIVO_JSON="notas.json";
 
 # Variables para retorno de errores (exit)
 declare ERROR_PARAMETROS_INVALIDOS=1;
@@ -44,7 +41,7 @@ declare ERROR_DIRECTORIO_SIN_ARCHIVOS=5;
 # ================================= Funciones =================================
 
 function ayuda() {
-    echo "USO: $0 [-d|--directorio <directorio_entrada_archivos_csv>] [-s|--salida <directorio_salida_archivo_json>] [-p|--pantalla]";
+    echo "USO: $0 [-d|--directorio <directorio_entrada_archivos_csv>] [-s|--salida <ruta_archivo_json_salida>] [-p|--pantalla]";
     echo "DESCRIPCIÓN: Este script procesa archivos CSV de notas de finales y genera un archivo JSON con el resumen de las notas de los alumnos.";
     echo "OPCIONES:";
     echo "  -d, --directorio   Ruta del directorio que contiene los archivos CSV a procesar.";
@@ -98,8 +95,8 @@ function mostrarOGuardarArchivoJson() {
     if [ "$mostrarPorPantalla" = true ]; then
         echo "$jsonData";
     else
-        echo "$jsonData" > "$directorioSalida/$ARCHIVO_JSON";
-        echo "El archivo $ARCHIVO_JSON fue generado exitosamente en la ruta indicada $directorioSalida";
+        echo "$jsonData" > "$rutaArchivoSalida";
+        echo "El archivo JSON fue generado exitosamente en la ruta indicada $rutaArchivoSalida";
     fi
 }
 
@@ -116,7 +113,9 @@ function obtenerCantidadDeEjercicios() {
 
 function validarArchivoCSV() {
     local encabezado=$(head -n 1 "$1");
-    if ! validarNombreArchivo "$1" || ! validarEncabezado "$encabezado"; then 
+    #if ! validarNombreArchivo "$1" || ! validarEncabezado "$encabezado"; then 
+        if ! validarEncabezado "$encabezado"; then 
+
         return 1; 
     fi
     return 0
@@ -145,13 +144,13 @@ function validarEncabezado() {
 # validarNombreArchivo: Se asegura de que el nombre del archivo coincida con algun codigo de 
 # materia, en este caso, se valida que el nombre tenga numeros utilizando una expresion regular.
 
-function validarNombreArchivo() {
-    local nombreArchivo=$(eliminarExtensionArchivo "$1");
-    if ! [[ "$nombreArchivo" =~ ^[0-9]+$ ]]; then
-        return 1
-    fi
-    return 0
-}
+#function validarNombreArchivo() {
+#    local nombreArchivo=$(eliminarExtensionArchivo "$1");
+#    if ! [[ "$nombreArchivo" =~ ^[0-9]+$ ]]; then
+#        return 1
+#    fi
+#    return 0
+#}
 
 # armarArchivoJson: Construye la salida en base al vector asociacito declarado (ver main).
 # Busco el dni del alumno si se encuentra en el JSON
@@ -236,7 +235,7 @@ while true; do
             shift 2;
             ;;
         -s | --salida)
-            directorioSalida="$2";
+            rutaArchivoSalida="$2";
             shift 2;
             ;;
         -p | --pantalla)
@@ -265,15 +264,30 @@ if ! [ -d "$directorioEntrada" ]; then
     exit $ERROR_DIRECTORIO;
 fi
 
+# Verificar que se haya proporcionado la ruta del archivo JSON de salida correctamente
+#if [ "$mostrarPorPantalla" = false ] && ! [ -z "$rutaArchivoSalida" ]; then
+#    echo "ERROR: Se debe especificar una ruta válida para guardar el archivo JSON.";
+#    ayuda;
+#    exit $ERROR_DIRECTORIO;
+#fi
+
 # Verificar que se haya proporcionado el directorio de salida correctamente
-if [ "$mostrarPorPantalla" = false ] && ! [ -d "$directorioSalida" ]; then
-    echo "ERROR: Se debe especificar un directorio válido para guardar el archivo JSON.";
-    ayuda;
-    exit $ERROR_DIRECTORIO;
+if [ "$mostrarPorPantalla" = false ]; then
+    # Intentar crear un archivo temporal en la ruta dada
+    touch "$rutaArchivoSalida" 2>/dev/null     
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Se debe especificar una ruta válida para guardar el archivo JSON.";         
+        ayuda;        
+        exit $ERROR_DIRECTORIO;     
+    fi
+    # Eliminar el archivo temporal si se creó
+    rm -f "$ruta_archivo_Salida"
 fi
 
+
+
 # Verificar que solo se haya proporcionado una opción de salida
-if [ "$mostrarPorPantalla" = true ] && [ -n "$directorioSalida" ]; then
+if [ "$mostrarPorPantalla" = true ] && [ -n "$rutaArchivoSalida" ]; then
     echo "ERROR: No se puede especificar la opción de pantalla (-p | --pantalla) junto con la opción de salida (-s | --salida).";
     ayuda;
     exit $ERROR_ARCHIVO_SALIDA_Y_PANTALLA;

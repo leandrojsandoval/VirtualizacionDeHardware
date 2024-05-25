@@ -23,6 +23,27 @@
       ]
     },
     {
+      "dni": "30300300",
+      "notas": [
+        {
+          "materia": "SistemasOperativos",
+          "nota": "9"
+        },
+        {
+          "materia": "1116",
+          "nota": "7"
+        },
+        {
+          "materia": "1114",
+          "nota": "8"
+        },
+        {
+          "materia": "1115",
+          "nota": "7"
+        }
+      ]
+    },
+    {
       "dni": "40400400",
       "notas": [
         {
@@ -39,12 +60,12 @@
       "dni": "20200200",
       "notas": [
         {
-          "materia": "1115",
-          "nota": "6"
+          "materia": "SistemasOperativos",
+          "nota": "10"
         },
         {
-          "materia": "1117",
-          "nota": "10"
+          "materia": "1115",
+          "nota": "6"
         },
         {
           "materia": "1116",
@@ -75,27 +96,6 @@
       ]
     },
     {
-      "dni": "30300300",
-      "notas": [
-        {
-          "materia": "1116",
-          "nota": "7"
-        },
-        {
-          "materia": "1117",
-          "nota": "9"
-        },
-        {
-          "materia": "1114",
-          "nota": "8"
-        },
-        {
-          "materia": "1115",
-          "nota": "7"
-        }
-      ]
-    },
-    {
       "dni": "10100100",
       "notas": [
         {
@@ -107,7 +107,7 @@
           "nota": "8"
         },
         {
-          "materia": "1117",
+          "materia": "SistemasOperativos",
           "nota": "9"
         }
       ]
