@@ -70,10 +70,18 @@ multiplicar_matrices() {
 
         # Obtener el número de elementos en la línea
         num_elementos=${#elementos[@]}
-        
+
         # Agregar los elementos a la matriz bidimensional
         for ((i=0; i<num_elementos; i++)); do
-            m1[$contador_fila,$i]=${elementos[$i]}
+
+            if [[ ${elementos[$i]} =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                m1[$contador_fila,$i]=${elementos[$i]}
+            else
+                echo "Error: El elemento de la matriz 1: '${elementos[$i]}' en la fila $contador_fila y columna $i no es un número válido."
+                exit 1         
+            fi
+
+            #m1[$contador_fila,$i]=${elementos[$i]}
         done
         
         # Incrementar el contador de fila
@@ -109,7 +117,14 @@ multiplicar_matrices() {
         
         # Agregar los elementos a la matriz bidimensional
         for ((i=0; i<num_elementos; i++)); do
-            m2[$contador_fila,$i]=${elementos[$i]}
+            if [[ ${elementos[$i]} =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                m2[$contador_fila,$i]=${elementos[$i]}
+            else
+                echo "Error: El elemento de la matriz 2: '${elementos[$i]}' en la fila $contador_fila y columna $i no es un número válido."
+                exit 1         
+            fi
+
+            #m2[$contador_fila,$i]=${elementos[$i]}
         done
         
         # Incrementar el contador de fila
@@ -238,6 +253,7 @@ if [ ! -s "$matriz1" ] || [ ! -s "$matriz2" ]; then
     echo "Al menos uno de los archivos esta vacio."
     exit 1
 fi
+
 #verifico que el caracter separador no sea numero ni menos
 if [[ "$separador" =~ [0-9] ]] || [[ "$separador" == "-" ]] || [[ "$separador" == "." ]]; then
     echo "El carácter separador '$separador' no es válido."
