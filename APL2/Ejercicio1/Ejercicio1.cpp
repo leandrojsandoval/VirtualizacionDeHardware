@@ -26,13 +26,14 @@
 
 using namespace std;
 
-const int ERROR_CREACION_FORK = -1;
 const int CREACION_EXITOSA = 0;
+const int ERROR_CREACION_FORK = -1;
+const int ERROR_PARAMETROS = -2;
 
 const int SEGUNDOS_ESPERA_PROCESO_PADRE = 10;
-const int SEGUNDOS_ESPERA_PROCESOS_HIJOS = 15;
+const int SEGUNDOS_ESPERA_PROCESOS_HIJOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_NIETOS = 10;
-const int SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS = 20;
+const int SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS = 10;
 
 const int SEGUNDOS_ESPERA_PROCESOS_ZOMBIES = 5;
 const int SEGUNDOS_ESPERA_PROCESOS_DEMONIOS = 5;
@@ -76,24 +77,41 @@ void esperarEnterUsuario ()
     getchar();
 }
 
-void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre) {
+void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre)
+{
     cout << "Soy el proceso " << nombreProceso << " con PID " << idProceso << ", mi padre es " << idProcesoPadre << endl; 
 }
 
-int main (int argc, char* argv[])
+int validarParametroAyuda (int cantidadDeParametros, string valorParametro)
 {
-    if (argc > 1)
+    if (cantidadDeParametros == 2)
     {
-        string arg = argv[1];
-        if (arg == "-h" || arg == "--help")
+        if (valorParametro == "-h" || valorParametro == "--help")
         {
             ayuda();
             return EXIT_SUCCESS;
         }
+        else
+        {
+            cout << "El parametro indicado no corresponde al parametro ayuda (-h o --help)" << endl;
+            return ERROR_PARAMETROS;
+        }
+    } 
+    else
+    {
+        cout << "El programa solo puede recibir el parametro de ayuda (-h o --help)" << endl;
+        return ERROR_PARAMETROS;
+    }
+}
+
+int main (int argc, char* argv[])
+{
+    if(argc > 1) 
+    {
+        return validarParametroAyuda(argc, argv[1]);
     }
     
     /*=============== Estoy en el proceso Padre ===============*/
-
     informarProcesoActual("Padre", getpid(), getppid());
     sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
     int estado;
@@ -177,6 +195,7 @@ int main (int argc, char* argv[])
                 informarProcesoActual("Hijo 3", getpid(), getppid());
                 sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
                 
+                //////////////////////////////////////////////////
                 if (crearFork() == CREACION_EXITOSA)
                 {
                     /*=============== Estoy en el proceso Demonio (Hijo del proceso Hijo 3) ===============*/
@@ -185,9 +204,11 @@ int main (int argc, char* argv[])
                     setsid();
                     chdir("/");
                 }
+                //////////////////////////////////////////////////
+                
                 // No hay else ya que al proceso hijo lo saque de la sesion, por lo tanto Hijo 3 no tiene que esperar a nadie
             }
-            else
+            else if(pidHijo3 > 0)
             {
                 /*=============== Estoy en el proceso Padre ===============*/
                 
@@ -200,6 +221,11 @@ int main (int argc, char* argv[])
 
                 sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
                 esperarEnterUsuario();
+            }
+            else
+            {
+                cout << "Hubo un error en la creacion del fork" << endl;
+                return ERROR_CREACION_FORK;
             }
         }
     } 
