@@ -1,5 +1,9 @@
-all :
-	g++ Ejercicio1.cpp -o Ejercicio1.exe
+COMPILADOR = g++
+ARCHIVO_ORIGEN = Ejercicio1.cpp
+ARCHIVO_EJECUTABLE = Ejercicio1.exe
+
+all:
+	$(COMPILADOR) $(ARCHIVO_ORIGEN) -o $(ARCHIVO_EJECUTABLE)
 
 clear :
-	rm Ejercicio1.exe
+	rm -f $(ARCHIVO_EJECUTABLE)
