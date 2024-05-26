@@ -22,9 +22,12 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <fstream>
 
 using namespace std;
 
@@ -37,6 +40,16 @@ const int SEGUNDOS_ESPERA_PROCESOS_HIJOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_NIETOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_ZOMBIES = 5;
+
+const char* NOMBRE_PROCESO_PADRE = "Padre";
+const char* NOMBRE_PROCESO_PRIMER_HIJO = "Hijo 1";
+const char* NOMBRE_PROCESO_SEGUNDO_HIJO = "Zombie";
+const char* NOMBRE_PROCESO_TERCER_HIJO = "Hijo 3";
+const char* NOMBRE_PROCESO_PRIMER_NIETO = "Nieto 1";
+const char* NOMBRE_PROCESO_SEGUNDO_NIETO = "Nieto 2";
+const char* NOMBRE_PROCESO_TERCER_NIETO = "Nieto 3";
+const char* NOMBRE_PROCESO_CUARTO_NIETO = "Demonio";
+const char* NOMBRE_PROCESO_BIZNIETO = "Biznieto";
 
 void ayuda ();
 void convertirEnDemonio();
@@ -172,6 +185,18 @@ int validarParametroAyuda (int cantidadDeParametros, string valorParametro)
     }
 }
 
+string obtenerNombreProceso(pid_t pid) {
+    string ruta = "/proc/" + to_string(pid) + "/comm";
+    ifstream archivoProceso(ruta);
+    if (archivoProceso.is_open()) {
+        string nombre;
+        getline(archivoProceso, nombre);
+        return nombre;
+    } else {
+        return "Unknown";
+    }
+}
+
 int main (int argc, char* argv[])
 {
     if(argc > 1) 
@@ -181,7 +206,8 @@ int main (int argc, char* argv[])
     
     cout << "Por favor, aguarde unos segundos hasta que se muestre la jerarquia completa ..." << endl;
     /*=============== Estoy en el proceso Padre ===============*/
-    informarProcesoActual("Padre", getpid(), getppid());
+    prctl(PR_SET_NAME, NOMBRE_PROCESO_PADRE, 0, 0, 0);
+    informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
     sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
     int estado;
     
@@ -190,13 +216,15 @@ int main (int argc, char* argv[])
     if(pidHijo1 == CREACION_EXITOSA)
     {
         /*=============== Estoy en el proceso Hijo 1 ===============*/
-        informarProcesoActual("Hijo 1", getpid(), getppid());
+        prctl(PR_SET_NAME, NOMBRE_PROCESO_PRIMER_HIJO, 0, 0, 0);
+        informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
         sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
 
         if (crearFork() == CREACION_EXITOSA)
         {
             /*=============== Estoy en el proceso Nieto 1 ===============*/
-            informarProcesoActual("Nieto 1", getpid(), getppid());
+            prctl(PR_SET_NAME, NOMBRE_PROCESO_PRIMER_NIETO, 0, 0, 0);
+            informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
             sleep(SEGUNDOS_ESPERA_PROCESOS_NIETOS);
         }
         else
@@ -205,7 +233,8 @@ int main (int argc, char* argv[])
             if(crearFork() == CREACION_EXITOSA)
             {
                 /*=============== Estoy en el proceso Nieto 2 ===============*/
-                informarProcesoActual("Nieto 2", getpid(), getppid());
+                prctl(PR_SET_NAME, NOMBRE_PROCESO_SEGUNDO_NIETO, 0, 0, 0);
+                informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
                 sleep(SEGUNDOS_ESPERA_PROCESOS_NIETOS);
             }
             else
@@ -214,18 +243,19 @@ int main (int argc, char* argv[])
                 if(crearFork() == CREACION_EXITOSA)
                 {                    
                     /*=============== Estoy en el proceso Nieto 3 ===============*/
-                    informarProcesoActual("Nieto 3", getpid(), getppid());
+                    prctl(PR_SET_NAME, NOMBRE_PROCESO_TERCER_NIETO, 0, 0, 0);
+                    informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
 
                     if (crearFork() == CREACION_EXITOSA)
                     {
                         /*=============== Estoy en el proceso Biznieto ===============*/
-                        informarProcesoActual("Biznieto", getpid(), getppid());
+                        prctl(PR_SET_NAME, NOMBRE_PROCESO_BIZNIETO, 0, 0, 0);
+                        informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
                         sleep(SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS);
                     }
                     else
                     {
                         /*=============== Estoy en el proceso Nieto 3 ===============*/
-
                         // Espero a Biznieto
                         wait(NULL);
                     }
@@ -233,7 +263,6 @@ int main (int argc, char* argv[])
                 else
                 {
                     /*=============== Estoy en el proceso Hijo 1 ===============*/
-
                     // Espero a Nieto 3
                     wait(NULL);
                     // Espero a Nieto 2
@@ -250,7 +279,8 @@ int main (int argc, char* argv[])
         if(crearFork() == CREACION_EXITOSA)
         {
             /*=============== Estoy en el proceso Zombie (Hijo 2) ===============*/
-            informarProcesoActual("Zombie", getpid(), getppid()); 
+            prctl(PR_SET_NAME, NOMBRE_PROCESO_SEGUNDO_HIJO, 0, 0, 0);
+            informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid()); 
             sleep(SEGUNDOS_ESPERA_PROCESOS_ZOMBIES);
             exit(0);
         }
@@ -261,12 +291,14 @@ int main (int argc, char* argv[])
             if(pidHijo3 == CREACION_EXITOSA)
             {
                 /*=============== Estoy en el proceso Hijo 3 ===============*/
-                informarProcesoActual("Hijo 3", getpid(), getppid());
+                prctl(PR_SET_NAME, NOMBRE_PROCESO_TERCER_HIJO, 0, 0, 0);
+                informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
                 sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
                 if (crearFork() == CREACION_EXITOSA)
                 {
                     /*=============== Estoy en el proceso Demonio (Hijo del proceso Hijo 3) ===============*/
-                    informarProcesoActual("Demonio", getpid(), getppid());
+                    prctl(PR_SET_NAME, NOMBRE_PROCESO_CUARTO_NIETO, 0, 0, 0);
+                    informarProcesoActual(obtenerNombreProceso(getpid()), getpid(), getppid());
                     convertirEnDemonio();
                 }                
                 // No hay else ya que al proceso hijo lo saque de la sesion, por lo tanto Hijo 3 no tiene que esperar a nadie
@@ -274,9 +306,7 @@ int main (int argc, char* argv[])
             else if(pidHijo3 > 0)
             {
                 /*=============== Estoy en el proceso Padre ===============*/
-                
                 // Debo especificar que pid tengo que esperar porque podria hacer un wait del proceso Zombie (Hijo 2)
-
                 // Espero a Hijo 3
                 waitpid(pidHijo3, &estado, 0);
                 // Espero a Hijo 1
