@@ -58,6 +58,7 @@ void esperarEnterUsuario ();
 void evitarInteraccionConLaTerminal();
 void ignorarSenialesDeTerminal();
 void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre);
+string obtenerNombreProceso(pid_t pid);
 int validarParametroAyuda (int cantidadDeParametros, string valorParametro);
 
 void ayuda ()
@@ -163,6 +164,18 @@ void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPa
     cout << "Soy el proceso " << nombreProceso << " con PID " << idProceso << ", mi padre es " << idProcesoPadre << endl; 
 }
 
+string obtenerNombreProceso(pid_t pid) {
+    string ruta = "/proc/" + to_string(pid) + "/comm";
+    ifstream archivoProceso(ruta);
+    if (archivoProceso.is_open()) {
+        string nombre;
+        getline(archivoProceso, nombre);
+        return nombre;
+    } else {
+        return "Unknown";
+    }
+}
+
 int validarParametroAyuda (int cantidadDeParametros, string valorParametro)
 {
     if (cantidadDeParametros == 2)
@@ -185,17 +198,7 @@ int validarParametroAyuda (int cantidadDeParametros, string valorParametro)
     }
 }
 
-string obtenerNombreProceso(pid_t pid) {
-    string ruta = "/proc/" + to_string(pid) + "/comm";
-    ifstream archivoProceso(ruta);
-    if (archivoProceso.is_open()) {
-        string nombre;
-        getline(archivoProceso, nombre);
-        return nombre;
-    } else {
-        return "Unknown";
-    }
-}
+
 
 int main (int argc, char* argv[])
 {
