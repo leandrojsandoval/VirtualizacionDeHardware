@@ -18,9 +18,11 @@
 #########################################################
 */
 
+#include <fcntl.h>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -34,9 +36,16 @@ const int SEGUNDOS_ESPERA_PROCESO_PADRE = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_HIJOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_NIETOS = 10;
 const int SEGUNDOS_ESPERA_PROCESOS_BIZNIETOS = 10;
-
 const int SEGUNDOS_ESPERA_PROCESOS_ZOMBIES = 5;
-const int SEGUNDOS_ESPERA_PROCESOS_DEMONIOS = 5;
+
+void ayuda ();
+void convertirEnDemonio();
+int crearFork ();
+void esperarEnterUsuario ();
+void evitarInteraccionConLaTerminal();
+void ignorarSenialesDeTerminal();
+void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre);
+int validarParametroAyuda (int cantidadDeParametros, string valorParametro);
 
 void ayuda ()
 {
@@ -61,6 +70,49 @@ void ayuda ()
     cout << "============================================================================" << endl;
 }
 
+void convertirEnDemonio() {
+
+    ignorarSenialesDeTerminal();
+
+    // El proceso padre sale del programa, dejando al proceso hijo en ejecución.
+    if (fork() > 0) {
+        exit(0);
+    }
+
+    /*setsid(): Crea una nueva sesión y establece al proceso actual como líder de esa sesión. 
+    Esto asegura que el proceso ya no tenga una terminal de control, lo que es esencial para que 
+    un demonio funcione correctamente.*/
+    if (setsid() < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    /* Se establece una señal para ignorar la señal SIGHUP, que generalmente se envía al cierre de la terminal. 
+    Ignorar esta señal evita que el proceso demonio se detenga cuando la terminal se cierra.*/
+    signal(SIGHUP, SIG_IGN);
+
+    /* Este segundo fork es para garantizar que el proceso demonio no pueda adquirir un terminal de control 
+    en el futuro. Una vez que se realiza este fork, el proceso es garantizado para no ser el líder de ningún 
+    grupo de sesiones.*/
+    if (fork() > 0) {
+        exit(0);
+    }
+
+    // Cambio el directorio de trabajo actual del demonio al directorio raíz ("/"). 
+    chdir("/");
+
+    /* Establezco la máscara de modo de archivo para el proceso demonio a cero, lo que significa que todos 
+    los permisos están permitidos.*/
+    umask(0);
+
+    /* Cierro todos los descriptores de archivo heredados, asegurando que el demonio no tenga abiertos
+    descriptores de archivo de sus procesos padres.*/
+    for (int fd = sysconf(_SC_OPEN_MAX); fd > 0; fd--) {
+        close(fd);
+    }
+
+    evitarInteraccionConLaTerminal();
+}
+
 int crearFork ()
 {
     pid_t procesoHijo = fork();
@@ -75,6 +127,22 @@ void esperarEnterUsuario ()
 {
     cout << "Presione enter para finalizar..." << endl;
     getchar();
+}
+
+void evitarInteraccionConLaTerminal()
+{
+    // Reabro los descriptores de archivo estándar (stdin, stdout, stderr) y los redirigen a /dev/null
+    open("/dev/null", O_RDWR);  // stdin
+    dup(0);                     // stdout
+    dup(0);                     // stderr
+}
+
+void ignorarSenialesDeTerminal()
+{
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
 }
 
 void informarProcesoActual (string nombreProceso, int idProceso, int idProcesoPadre)
@@ -111,6 +179,7 @@ int main (int argc, char* argv[])
         return validarParametroAyuda(argc, argv[1]);
     }
     
+    cout << "Por favor, aguarde unos segundos hasta que se muestre la jerarquia completa ..." << endl;
     /*=============== Estoy en el proceso Padre ===============*/
     informarProcesoActual("Padre", getpid(), getppid());
     sleep(SEGUNDOS_ESPERA_PROCESO_PADRE);
@@ -194,18 +263,12 @@ int main (int argc, char* argv[])
                 /*=============== Estoy en el proceso Hijo 3 ===============*/
                 informarProcesoActual("Hijo 3", getpid(), getppid());
                 sleep(SEGUNDOS_ESPERA_PROCESOS_HIJOS);
-                
-                //////////////////////////////////////////////////
                 if (crearFork() == CREACION_EXITOSA)
                 {
                     /*=============== Estoy en el proceso Demonio (Hijo del proceso Hijo 3) ===============*/
                     informarProcesoActual("Demonio", getpid(), getppid());
-                    sleep(SEGUNDOS_ESPERA_PROCESOS_DEMONIOS);
-                    setsid();
-                    chdir("/");
-                }
-                //////////////////////////////////////////////////
-                
+                    convertirEnDemonio();
+                }                
                 // No hay else ya que al proceso hijo lo saque de la sesion, por lo tanto Hijo 3 no tiene que esperar a nadie
             }
             else if(pidHijo3 > 0)
