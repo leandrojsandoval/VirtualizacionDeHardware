@@ -26,47 +26,54 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#define FIFO "/tmp/sensor_fifo"
+using namespace std;
 
-void ayuda ()
-{
-    cout << "============================== Ejercicio3 ==============================" << endl;
-    cout << "Este script simular un sistema de toma de mediciones de sensores en una fábrica:" << std::endl;
-    
-}
-
-void run_sensor(int sensor_number, int interval, int message_count) {
-    int fifo_fd = open(FIFO, O_WRONLY);
-    if (fifo_fd == -1) {
-        std::cerr << "FIFO no existe, asegurarse de que el proceso central esté en ejecución." << std::endl;
-        exit(1);
-    }
-
-    srand(time(0) + sensor_number);
-
-    for (int i = 0; i < message_count; ++i) {
-        int measurement = rand() % 101;
-        std::string message = "Sensor " + std::to_string(sensor_number) + ": " + std::to_string(measurement) + "\n";
-        write(fifo_fd, message.c_str(), message.size());
-        sleep(interval);
-    }
-
-    close(fifo_fd);
-}
+const char* FIFO_NAME = "/tmp/sensor_fifo";
 
 int main(int argc, char* argv[]) {
-    if (argc != 9 ||
-        std::string(argv[1]) != "-n" ||
-        std::string(argv[3]) != "-s" ||
-        std::string(argv[5]) != "-m") {
-        std::cerr << "Uso: " << argv[0] << " -n <numero_sensor> -s <intervalo_segundos> -m <cantidad_mensajes>" << std::endl;
+
+    int sensorNumber = -1;
+    int interval = -1;
+    int messageCount = -1;
+
+    // Recorre los argumentos de línea de comandos
+    for (int i = 1; i < argc; ++i) {
+        // Comprueba si el argumento actual es "-n" y que haya un siguiente argumento
+        if (string(argv[i]) == "-n" && i + 1 < argc) {
+            sensorNumber = stoi(argv[++i]); // Asigna el siguiente argumento a sensorNumber
+        } else if (string(argv[i]) == "-s" && i + 1 < argc) {
+            interval = stoi(argv[++i]); // Asigna el siguiente argumento a interval
+        } else if (string(argv[i]) == "-m" && i + 1 < argc) {
+            messageCount = stoi(argv[++i]); // Asigna el siguiente argumento a messageCount
+        }
+    }
+
+
+     // Comprueba que todos los parámetros requeridos hayan sido proporcionados
+    if (sensorNumber == -1 || interval == -1 || messageCount == -1) {
+        cerr << "Usage: " << argv[0] << " -n <sensor number> -s <seconds interval> -m <messages count>" << endl;
         return 1;
     }
 
-    int sensor_number = std::stoi(argv[2]);
-    int interval = std::stoi(argv[4]);
-    int message_count = std::stoi(argv[6]);
+    //Se abre el FIFO en modo escritura (O_WRONLY).
+    int fd = open(FIFO_NAME, O_WRONLY);
+    if (fd == -1) {
+        cerr << "Failed to open FIFO" << endl;
+        return 1;
+    }
 
-    run_sensor(sensor_number, interval, message_count);
+    // Inicializa el generador de números aleatorios
+    srand(time(nullptr));
+
+    // Bucle para enviar las mediciones
+    for (int i = 0; i < messageCount; ++i) {
+        int measurement = rand() % 100; // Genera una medición aleatoria
+        string message = "Sensor " + to_string(sensorNumber) + ": " + to_string(measurement);
+        write(fd, message.c_str(), message.size()); // Escribe el mensaje en el FIFO
+        sleep(interval); // Espera el intervalo especificado
+    }
+
+    // Cierra el FIFO
+    close(fd);
     return 0;
 }

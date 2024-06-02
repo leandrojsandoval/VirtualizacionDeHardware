@@ -1,15 +1,14 @@
-CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++11
-TARGETS = daemon sensor
+# Regla por defecto para compilar los ejecutables
+all: daemon sensor
 
-all: $(TARGETS)
-
+# Regla para compilar el demonio
 daemon: daemon.cpp
-	$(CXX) $(CXXFLAGS) -o daemon daemon.cpp
+	g++ daemon.cpp -o daemon.exe
 
+# Regla para compilar el sensor
 sensor: sensor.cpp
-	$(CXX) $(CXXFLAGS) -o sensor sensor.cpp
+	g++ sensor.cpp -o sensor.exe
 
+# Regla para limpiar los ejecutables generados
 clean:
-	rm -f $(TARGETS)
-	rm -f /tmp/sensor_fifo
+	rm -f daemon.exe sensor.exe log.txt

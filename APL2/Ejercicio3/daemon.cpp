@@ -27,64 +27,89 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define FIFO "/tmp/sensor_fifo"
 
-std::ofstream logFile;
+using namespace std;
 
-void signal_handler(int signum) {
-    std::cout << "Señal de terminación recibida, cerrando demonio." << std::endl;
-    if (std::remove(FIFO) != 0) {
-        perror("Error eliminando el FIFO");
-    }
+const char* FIFO_NAME = "/tmp/sensor_fifo";
+ofstream logFile;
+
+void signalHandler(int signum) {
+    cout << "Interrupt signal (" << signum << ") received. Shutting down." << endl;
     logFile.close();
+    unlink(FIFO_NAME); // Borra el FIFO
     exit(signum);
 }
 
-void run_daemon(const char* log_file_path) {
-    logFile.open(log_file_path, std::ios_base::app);
-    if (!logFile.is_open()) {
-        std::cerr << "Error abriendo el archivo de log." << std::endl;
-        exit(1);
-    }
-
-    if (mkfifo(FIFO, 0666) == -1 && errno != EEXIST) {
-        perror("Error creando el FIFO");
-        exit(1);
-    }
-
-    std::cout << "Daemon iniciado, esperando mensajes..." << std::endl;
-    std::signal(SIGTERM, signal_handler);
-
-    int fifo_fd = open(FIFO, O_RDONLY);
-    if (fifo_fd == -1) {
-        perror("Error abriendo el FIFO");
-        exit(1);
-    }
-
-    char buffer[256];
-    while (true) {
-        ssize_t bytesRead = read(fifo_fd, buffer, sizeof(buffer) - 1);
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            time_t now = time(0);
-            tm *ltm = localtime(&now);
-            logFile << 1900 + ltm->tm_year << "-"
-                    << 1 + ltm->tm_mon << "-"
-                    << ltm->tm_mday << " "
-                    << 1 + ltm->tm_hour << ":"
-                    << 1 + ltm->tm_min << ":"
-                    << 1 + ltm->tm_sec << " "
-                    << buffer << std::endl;
-        }
-    }
+//obtener fecha y hora actual
+string currentDateTime() {
+    time_t now = time(0);
+    char buf[80];
+    strftime(buf, sizeof(buf), "%Y-%m-%d %X", localtime(&now));
+    return buf;
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 3 || std::string(argv[1]) != "-l") {
-        std::cerr << "Uso: " << argv[0] << " -l <archivo_log>" << std::endl;
+    if (argc != 3 || string(argv[1]) != "-l") {
+        cerr << "Usage: " << argv[0] << " -l <logfile>" << endl;
         return 1;
     }
 
-    run_daemon(argv[2]);
+    string logFileName = argv[2];
+
+    // Daemonize the process
+    pid_t pid = fork(); //crea un nuevo proceso
+    if (pid < 0) {
+        cerr << "Fork failed!" << endl;
+        return 1;
+    }
+    if (pid > 0) {
+        cout << "Daemon PID: " << pid << endl;
+        exit(0);
+    }
+
+    umask(0);
+    pid_t sid = setsid(); //crea un nueva sesion para el proceso hijo
+    if (sid < 0) {
+        return 1;
+    }
+
+    if ((chdir("/")) < 0) { //cambia el directorio de trabajo a la raiz
+        return 1;
+    }
+
+    //Se cierran los descriptores de archivo estándar (stdin, stdout, stderr).
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    signal(SIGINT, signalHandler);
+
+    mkfifo(FIFO_NAME, 0666); //Se crea el FIFO con mkfifo() y se abre el archivo de log.
+
+    logFile.open(logFileName, std::ios_base::app);
+    if (!logFile.is_open()) {
+        std::cerr << "Failed to open log file" << std::endl;
+        return 1;
+    }
+
+    int fd = open(FIFO_NAME, O_RDONLY);
+    if (fd == -1) {
+        std::cerr << "Failed to open FIFO" << std::endl;
+        return 1;
+    }
+
+    char buffer[128];
+    while (true) {
+        ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
+        if (bytesRead > 0) {
+            buffer[bytesRead] = '\0';
+            logFile << currentDateTime() << " " << buffer << std::endl;
+        }
+    }
+
+    close(fd);
+    logFile.close();
+    unlink(FIFO_NAME);
+
     return 0;
 }
