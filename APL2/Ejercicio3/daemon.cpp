@@ -33,83 +33,90 @@ using namespace std;
 const char* FIFO_NAME = "/tmp/sensor_fifo";
 ofstream logFile;
 
-void signalHandler(int signum) {
-    cout << "Interrupt signal (" << signum << ") received. Shutting down." << endl;
-    logFile.close();
-    unlink(FIFO_NAME); // Borra el FIFO
-    exit(signum);
+int keep_running = 1;
+
+void handle_signal(int sig) {
+    keep_running = 0;
 }
 
-//obtener fecha y hora actual
-string currentDateTime() {
-    time_t now = time(0);
-    char buf[80];
-    strftime(buf, sizeof(buf), "%Y-%m-%d %X", localtime(&now));
-    return buf;
+void cleanup() {
+    unlink(FIFO_NAME); // Elimina el FIFO
 }
 
-int main(int argc, char* argv[]) {
-    if (argc != 3 || string(argv[1]) != "-l") {
-        cerr << "Usage: " << argv[0] << " -l <logfile>" << endl;
-        return 1;
+
+void write_log(const char *logfile, const char *message) {
+    FILE *file = fopen(logfile, "a");
+    if (file == NULL) {
+        perror("Error opening log file");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(file, "%s\n", message);
+    fclose(file);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s -l <logfile>\n", argv[0]);
+        exit(EXIT_FAILURE);
     }
 
-    string logFileName = argv[2];
+    char *logfile = NULL;
 
-    // Daemonize the process
-    pid_t pid = fork(); //crea un nuevo proceso
-    if (pid < 0) {
-        cerr << "Fork failed!" << endl;
-        return 1;
-    }
-    if (pid > 0) {
-        cout << "Daemon PID: " << pid << endl;
-        exit(0);
-    }
-
-    umask(0);
-    pid_t sid = setsid(); //crea un nueva sesion para el proceso hijo
-    if (sid < 0) {
-        return 1;
-    }
-
-    if ((chdir("/")) < 0) { //cambia el directorio de trabajo a la raiz
-        return 1;
-    }
-
-    //Se cierran los descriptores de archivo estándar (stdin, stdout, stderr).
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-
-    signal(SIGINT, signalHandler);
-
-    mkfifo(FIFO_NAME, 0666); //Se crea el FIFO con mkfifo() y se abre el archivo de log.
-
-    logFile.open(logFileName, std::ios_base::app);
-    if (!logFile.is_open()) {
-        std::cerr << "Failed to open log file" << std::endl;
-        return 1;
-    }
-
-    int fd = open(FIFO_NAME, O_RDONLY);
-    if (fd == -1) {
-        std::cerr << "Failed to open FIFO" << std::endl;
-        return 1;
-    }
-
-    char buffer[128];
-    while (true) {
-        ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            logFile << currentDateTime() << " " << buffer << std::endl;
+    int opt;
+    while ((opt = getopt(argc, argv, "l:")) != -1) {
+        switch (opt) {
+            case 'l':
+                logfile = optarg;
+                break;
+            default:
+                fprintf(stderr, "Usage: %s -l <logfile>\n", argv[0]);
+                exit(EXIT_FAILURE);
         }
     }
 
-    close(fd);
-    logFile.close();
+    if (logfile == NULL) {
+        fprintf(stderr, "Log file is required\n");
+        exit(EXIT_FAILURE);
+    }
+
+    signal(SIGTERM, handle_signal);
+    signal(SIGINT, handle_signal);
+
     unlink(FIFO_NAME);
 
+    if (mkfifo(FIFO_NAME, 0666) == -1) {
+        perror("Error creating FIFO");
+        exit(EXIT_FAILURE);
+    }
+
+    // Registrar la función de limpieza para que se ejecute al finalizar
+    atexit(cleanup);
+    
+    int fd;
+    char buffer[256];
+    while (keep_running) {
+        fd = open(FIFO_NAME, O_RDONLY);
+        if (fd == -1) {
+            perror("Error opening FIFO");
+            exit(EXIT_FAILURE);
+        }
+
+        while (read(fd, buffer, sizeof(buffer)) > 0) {
+            time_t now = time(NULL);
+            struct tm *t = localtime(&now);
+            char time_str[100];
+            strftime(time_str, sizeof(time_str) - 1, "%Y-%m-%d %H:%M:%S", t);
+
+            char log_entry[512];
+            snprintf(log_entry, sizeof(log_entry), "%s - %s", time_str, buffer);
+            write_log(logfile, log_entry);
+        }
+        cout << "estoy adentro del while" << endl;
+        close(fd);
+        cout << "pase el close" << endl;
+        cout << keep_running << endl;
+    }
+    
+    unlink(FIFO_NAME);
     return 0;
 }
