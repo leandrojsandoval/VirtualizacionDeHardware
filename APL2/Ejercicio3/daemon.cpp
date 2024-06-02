@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 
 
 using namespace std;
@@ -55,6 +56,9 @@ void write_log(const char *logfile, const char *message) {
 }
 
 int main(int argc, char *argv[]) {
+
+    cout << "PID del proceso: " << getpid() << endl;
+
     if (argc != 3) {
         fprintf(stderr, "Usage: %s -l <logfile>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -94,28 +98,49 @@ int main(int argc, char *argv[]) {
     
     int fd;
     char buffer[256];
+
     while (keep_running) {
-        fd = open(FIFO_NAME, O_RDONLY);
+        fd = open(FIFO_NAME, O_RDONLY | O_NONBLOCK);
         if (fd == -1) {
             perror("Error opening FIFO");
             exit(EXIT_FAILURE);
         }
 
-        while (read(fd, buffer, sizeof(buffer)) > 0) {
-            time_t now = time(NULL);
-            struct tm *t = localtime(&now);
-            char time_str[100];
-            strftime(time_str, sizeof(time_str) - 1, "%Y-%m-%d %H:%M:%S", t);
+        struct pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = POLLIN;
 
-            char log_entry[512];
-            snprintf(log_entry, sizeof(log_entry), "%s - %s", time_str, buffer);
-            write_log(logfile, log_entry);
+        int poll_ret = poll(&pfd, 1, 1000); // Esperar hasta 1 segundo
+
+        if (poll_ret == -1) {
+            perror("Proceso demonio terminado ");
+            close(fd);
+            exit(EXIT_FAILURE);
+        } else if (poll_ret == 0) {
+            // Timeout, continuar el bucle
+            close(fd);
+            continue;
         }
-        cout << "estoy adentro del while" << endl;
+
+        if (pfd.revents & POLLIN) {
+            ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';
+
+                time_t now = time(NULL);
+                struct tm *t = localtime(&now);
+                char time_str[100];
+                strftime(time_str, sizeof(time_str) - 1, "%Y-%m-%d %H:%M:%S", t);
+
+                char log_entry[512];
+                snprintf(log_entry, sizeof(log_entry), "%s - %s", time_str, buffer);
+                write_log(logfile, log_entry);
+            }
+        }
+
         close(fd);
-        cout << "pase el close" << endl;
-        cout << keep_running << endl;
     }
+     
     
     unlink(FIFO_NAME);
     return 0;
