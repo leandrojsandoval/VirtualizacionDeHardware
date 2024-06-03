@@ -12,42 +12,56 @@
 #include <cstring>
 #include <signal.h>
 #include <string>
-#include <string.h>
-#include <sys/types.h>
-#include <linux/fs.h>
-#include <sys/param.h>
-#include <time.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <vector>
+#include <algorithm>
+#include <ctime>
+#include <cstdlib>
+#include <csignal>
+#include <atomic>
 
-typedef struct {
-    char situacion[5]; // ALTA (ingreso/rescatado) BAJA (adopcion/egreso)
-    char nombre[21];
-    char raza[21];
-    char sexo[2];    // M o H
-    char estado[3]; // CA (castrado) o SC (sin castrar) 
-}gato;
+using namespace std;
 
 typedef struct {
     int pidServ;
     int Socket_Escucha;
-}dato;
+} dato;
+
+typedef struct {
+    int filaLetra1;
+    int columnaLetra1;
+    int filaLetra2;
+    int columnaLetra2;
+    int puntuacion;
+} Adininanza;
+
+typedef struct {
+    string respuesta;
+    int puntuacion;
+    vector<vector<char>> tableroActual;
+} Respuesta;
+
+typedef struct {
+    int puntuacion;
+} Jugador;
+
+// Variable global para indicar que el servidor debe detenerse
+atomic<bool> serverRunning(true);
+
+vector<Jugador> jugadores;
+vector<int> clientesSockets;
+vector<int> nuevosClientesSockets;
 
 sem_t* semaforos[1];
-/*
-    0 - Servidor (solo puede haber 1) se inicia en 1 y rapidamente se ocupa por el primer demonio. se liberara cuando el servidor demonio sea detenido
-*/
 
-using namespace std;
-//necesitamos un identificador para la memoria compartida para que los diferentes procesos que vayan a utilizarla tengan una manera de referenciarla
 #define MemPid "pidServidorSocket"
 #define SERV_HOST_ADDR "127.0.0.1"     /* IP, only IPV4 support  */
 
-string realizar_Actividades(const char[]);
 /***********************************Semaforos**********************************/
 void eliminar_Sem();
 void inicializarSemaforos();
@@ -57,460 +71,392 @@ void inicializarSemaforos();
 void liberar_Recursos(int);
 /***********************************Recursos**********************************/
 
-/***********************************Archivos**********************************/
-bool Ayuda(const char *);
-int consultarArchivo(const char[20]);
-int escribirArchivo(gato*);
-int modificar_Archivo(const char[20]);
-gato* devolver_gato(const char[20]);
-int obtener_Rescatados(const char*);
-/***********************************Archivos**********************************/
+/*******************Funciones particulares del caso***************************/
+vector<vector<char>> generarTablero();
+vector<vector<char>> mostrarTablero(const vector<vector<char>>& tablero, const vector<vector<bool>>& descubiertas);
+bool tableroCompleto(const vector<vector<bool>>& descubiertas);
+string comprobarYActualizarTablero(vector<vector<char>>& tablero, vector<vector<bool>>& descubiertas, int fila1, int col1, int fila2, int col2);
+vector<char> serializarRespuesta(const Respuesta& resp);
 
 
-int main(int argc, char *argv[]){
-    if(argc > 1){
-        if((strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"--help") == 0) && argc == 2){
-            Ayuda(argv[1]);
-            exit(EXIT_SUCCESS);
-        }
-        else{
-            if((strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"--help") == 0) && argc > 2){
-                cout << "Error, el servidor no debe recibir parametros junto con el de ayuda" << endl;
-                exit(EXIT_FAILURE);
-            }
-            else{
-                /*
-                if((strcmp(argv[1],"-h") != 0 && strcmp(argv[1],"--help") != 0) && argc > 2){
-                    cout << "Error, el servidor no debe recibir parametros junto con el host" << endl;
-                    exit(EXIT_FAILURE);
-                }
-                */
-                if((strcmp(argv[1],"-h") != 0 && strcmp(argv[1],"--help") != 0) && argc != 3){
-                    cout << "Error, el servidor debe recibir la ip y el host del servidor." << endl;
-                    exit(EXIT_FAILURE);
-                }
-            }
-        }
+bool Ayuda(const char *cad);
+
+//atender señales
+void signalHandler(int signum) {
+    std::cout << "Interrupción recibida: " << signum << std::endl;
+    serverRunning = false;  // Indicar que el servidor debe detenerse
+    // Informa a todos los clientes que el servidor se ha caído o detenido
+    string mensajeFinal = "El servidor ha caído o ha sido detenido";
+    for (int clienteSocket : clientesSockets) {
+        write(clienteSocket, mensajeFinal.c_str(), mensajeFinal.length());  // Envía el mensaje a cada cliente
+        close(clienteSocket);  // Cierra la conexión con el cliente
     }
-    else{
-        cout << "Error, cantidad de parametros erroneo, para ayuda ejecute ./Servidor -h o ./Servidor --help" << endl;
+    close(socketComunicacion);
+    liberar_Recursos();
+}
+
+
+/**inputs puerto servidor, cantidad de clientes posibles**/
+int main(int argc, char *argv[]){
+
+    int cantidadJugadores = -1;
+    int puerto = -1;
+    if (argc == 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)) {
+        Ayuda(argv[1]);
+        exit(EXIT_SUCCESS);
+    } else if (argc != 5) {
+        cout << "Uso incorrecto. Para ayuda ejecute ./Servidor -h o ./Servidor --help" << endl;
         exit(EXIT_FAILURE);
     }
 
-    pid_t pid, sid;
+    // Obtener cantidad de jugadores y puerto
+    for (int i = 1; i < argc; i++) {
+        if ((strcmp(argv[i], "-j") == 0 || strcmp(argv[i], "--jugadores") == 0) && i + 1 < argc) {
+            cantidadJugadores = atoi(argv[i + 1]);
+            i++;
+        } else if ((strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--puerto") == 0) && i + 1 < argc) {
+            puerto = atoi(argv[i + 1]);
+            i++;
+        } else {
+            cout << "Uso incorrecto. Para ayuda ejecute ./Servidor -h o ./Servidor --help" << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (cantidadJugadores <= 0 || puerto <= 0) {
+        cout << "Error: número de jugadores y puerto deben ser mayores a 0." << endl;
+        exit(EXIT_FAILURE);
+    }
+
+
+    pid_t pid, sid; //Proceso y sesión
     int i;
 
     // Ignora la señal de E / S del terminal, señal de PARADA
-	signal(SIGTTOU,SIG_IGN);
-	signal(SIGTTIN,SIG_IGN);
-	signal(SIGTSTP,SIG_IGN);
-	signal(SIGHUP,SIG_IGN);
+    signal(SIGTTOU, SIG_IGN); // Ignorar señal de salida del terminal
+    signal(SIGTTIN, SIG_IGN); // Ignorar señal de entrada del terminal
+    signal(SIGTSTP, SIG_IGN); // Ignorar señal de parada
+    signal(SIGHUP, SIG_IGN);  // Ignorar señal de colgar
 
-    pid = fork();
+    pid = fork(); // Crear un nuevo proceso
     if (pid < 0) 
-        exit(EXIT_FAILURE); // Finaliza el proceso padre, haciendo que el proceso hijo sea un proceso en segundo plano
+        exit(EXIT_FAILURE); // Finaliza el proceso padre, haciendo que el proceso hijo sea un proceso en segundo plano, es decir, el fork falló
     if (pid > 0)
-        exit(EXIT_SUCCESS);
-    // Cree un nuevo grupo de procesos, en este nuevo grupo de procesos, el proceso secundario se convierte en el primer proceso de este grupo de procesos, de modo que el proceso se separa de todos los terminales    
-
+        exit(EXIT_SUCCESS); // Salir del proceso padre
+    
+    // Cree un nuevo grupo de procesos, en este nuevo grupo de procesos, el proceso secundario se convierte en el primer proceso de este grupo de procesos, de modo que el proceso se separa de todos los terminales
     sid = setsid();
-
     if (sid < 0) {
-         exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); // Si no se puede crear la sesión, salir
     }
 
-	// Cree un nuevo proceso hijo nuevamente, salga del proceso padre, asegúrese de que el proceso no sea el líder del proceso y haga que el proceso no pueda abrir una nueva terminal
-	pid=fork();
-	if( pid > 0) {
-		exit(EXIT_SUCCESS);
-	}
-	else if( pid< 0) {
-		exit(EXIT_FAILURE);
-	}
-  
-	// Cierre todos los descriptores de archivos heredados del proceso padre que ya no son necesarios
-	for(i=0;i< NOFILE;close(i++));
-
-    // Cambia el directorio de trabajo para que el proceso no contacte con ningún sistema de archivos
-    //if ((chdir("/")) < 0) {
-      //  exit(EXIT_FAILURE);
-    //}    
-
-	// Establece la palabra de protección del archivo en 0 en el momento
-	umask(0);
-
-    // el O_CREAT en este caso dice, si no esta crearlo. Si el semaforo no existe, crealo.
-    inicializarSemaforos();
-
-    //P(Servidor)
-    sem_wait(semaforos[0]);
-    /*************************************************************************************************/
-
-    //Manejo de señales, cuando se reciban algunas de las dos señales se ejecutara su correspondiente función.
-    signal(SIGUSR1, liberar_Recursos);
-    //si esta la señal Ctrl+c la ignora.
-    signal(SIGINT,SIG_IGN);
-
-    ofstream archivo;
-    archivo.open("gatos.txt",ios::out);
-    if(archivo.fail())
+    // Cree un nuevo proceso hijo nuevamente, salga del proceso padre, asegúrese de que el proceso no sea el líder del proceso y haga que el proceso no pueda abrir una nueva terminal
+    pid = fork();
+    if (pid > 0) {
+        exit(EXIT_SUCCESS);
+    }
+    else if (pid < 0) {
         exit(EXIT_FAILURE);
-    archivo << "Situacion|Nombre|Raza|Sexo|Estado";
-    archivo.close();
-    struct sockaddr_in serverConfig;
-    memset(&serverConfig,'0',sizeof(serverConfig));
+    }
 
+    // Cierre todos los descriptores de archivos heredados del proceso padre que ya no son necesarios
+    for (i = 0; i < NOFILE; close(i++));
+
+    // Establece la palabra de protección del archivo en 0 en el momento
+    umask(0); // Restablecer la máscara de creación de archivos
+
+    // Inicialización de semáforos
+    inicializarSemaforos(); 
+
+    // P(Servidor)
+    sem_wait(semaforos[0]);
+
+    // Manejo de señales, cuando se reciban algunas de las dos señales se ejecutará su correspondiente función.
+    signal(SIGUSR1, liberar_Recursos); // Manejar SIGUSR1 para liberar recursos
+    //si esta la señal Ctrl+c la ignora.
+    //signal(SIGINT, SIG_IGN); // Ignorar SIGINT
+
+    signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
+
+    struct sockaddr_in serverConfig; // Estructura de configuración del servidor
+    memset(&serverConfig, '0', sizeof(serverConfig)); // Inicializar estructura a cero
+
+    // Familia de direcciones IPv4
     serverConfig.sin_family = AF_INET; //IPV4: 127.0.0.1
-    //Direcciones desde la cuales estamos esperando conexiones.
-    //INADDR_ANY, estoy escuchando conexiones desde cualquier IP
-    //serverConfig.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR); 
-    //serverConfig.sin_addr.s_addr = htonl(INADDR_ANY);
 
     //en caso de pasar la ip del servidor descomentar esto.
-    serverConfig.sin_addr.s_addr = inet_addr(argv[1]);
+    //serverConfig.sin_addr.s_addr = inet_addr(argv[1]);// Configurar dirección IP del servidor
+    serverConfig.sin_addr.s_addr = INADDR_ANY;// Configurar dirección IP del servidor
 
-
-    //le pasamos el puerto, en este caso el 5000
-    //serverConfig.sin_port = htons(atoi(argv[1]));
     
     //en caso de pasar la ip del servidor descomentar esto.
-    serverConfig.sin_port = htons(atoi(argv[2]));
+    serverConfig.sin_port = htons(puerto);
 
-    //htonl y htons son porque la estructura de configuración de los sockets utiliza un formato distinto en la manera en la que se guardan los numeros que se estan usando en C.
-    //estas funciones convierten esos numeros a un modo compatible con los sockets.
+    int socketEscucha = socket(AF_INET, SOCK_STREAM, 0);
+    if (socketEscucha == -1) {
+        cerr << "Error al crear el socket: " << strerror(errno) << endl;
+        exit(EXIT_FAILURE);
+    }
 
-    //Creamos el socket
-    //AF_INET: que sera IPV4
-    //SOCK_STREAM: esteremos usando el protocolo tcp. 
-    int socketEscucha = socket(AF_INET,SOCK_STREAM,0);
     //nos va a linkear/relacionar nuestro socket con nuestra configuración.
     //bind asinga una direccion ip y un puerto al socket.
-    bind(socketEscucha,(struct sockaddr *)&serverConfig,sizeof(serverConfig));
+    if (bind(socketEscucha, (struct sockaddr *)&serverConfig, sizeof(serverConfig)) < 0) {
+        cerr << "Error al enlazar el socket: " << strerror(errno) << endl;
+        close(socketEscucha);
+        exit(EXIT_FAILURE);
+    }
 
-    listen(socketEscucha,3); // hasta 3 clientes pueden estar encolados, hace que el socket se vuelva pasivo. Es decir, quede escuchando.
+    // Configurar socket en modo escucha
+    if (listen(socketEscucha, cantidadJugadores) < 0) {
+        cerr << "Error al configurar el socket en modo escucha: " << strerror(errno) << endl;
+        close(socketEscucha);
+        exit(EXIT_FAILURE);
+    }
 
+    // Creación de memoria compartida
     //creamos una memoria compartida especial donde guardaremos el pid del servidorSocket y el socket de escucha.
     int idAux = shm_open(MemPid, O_CREAT | O_RDWR, 0600);
-    ftruncate(idAux,sizeof(dato));
-    dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux,0);
+    if(idAux == -1){
+        cerr << "Error al crear la memoria compartida: " << strerror(errno) << endl;
+        close(socketEscucha);
+        exit(EXIT_FAILURE);
+    }
+
+    if (ftruncate(idAux, sizeof(dato)) == -1) {
+        cerr << "Error al configurar el tamaño de la memoria compartida: " << strerror(errno) << endl;
+        close(socketEscucha);
+        shm_unlink(MemPid);
+        exit(EXIT_FAILURE);
+    }
+
+    dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux, 0);
+    if (pidA == MAP_FAILED) {
+        cerr << "Error al mapear la memoria compartida: " << strerror(errno) << endl;
+        close(socketEscucha);
+        shm_unlink(MemPid);
+        exit(EXIT_FAILURE);
+    }
     close(idAux);
     pidA->pidServ = getpid();
     pidA->Socket_Escucha = socketEscucha;
-    munmap(pidA,sizeof(dato));
-    //
-    while (1) {
-        int socketComunicacion = accept(socketEscucha, (struct sockaddr *) NULL, NULL);
-        char mensajeCliente[2000];
-        bzero(mensajeCliente,2000);
-        int bytesRecibidos = 0;
-        bytesRecibidos = read(socketComunicacion,mensajeCliente,sizeof(mensajeCliente) - 1);
-        if(bytesRecibidos > 0){   
-            string sendBuff = realizar_Actividades(mensajeCliente);
-            //Escribimos en el socket de comunicacion que vamos a mandar y el tamaño que tiene lo que vamos a mandar
-            char respuestaServidor[2000];
-            bzero(respuestaServidor,2000);
-            strcpy(respuestaServidor,"");
-            strcpy(respuestaServidor,sendBuff.c_str());
-            //char cad[] = "Hola! Soy el proceso servidor";
-            //strcpy(cad,"");
-            //strcpy(cad,mensajeCliente);
-            write(socketComunicacion,respuestaServidor,strlen(respuestaServidor));
-            close(socketComunicacion);
-        }
-    }
-   exit(EXIT_SUCCESS);
-}
+    munmap(pidA, sizeof(dato));
 
-string realizar_Actividades(const char mensaje[]){
-    char aux[2000];
-    strcpy(aux,mensaje);
-    char *p = strtok(aux,"|");
-    if(strcmp(p,"ALTA") == 0){
-        gato *g = (gato*)malloc(sizeof(gato));
-        if(g == NULL)
-            exit(EXIT_FAILURE);
-        strcpy(g->situacion,p);
-        p = strtok(NULL,"|");
-        strcpy(g->nombre,p);
-        p = strtok(NULL,"|");
-        strcpy(g->raza,p);
-        p = strtok(NULL,"|");
-        strcpy(g->sexo,p);
-        p = strtok(NULL,"|");
-        strcpy(g->estado,p);
-        int i = escribirArchivo(g);
-        free(g);
-        if(i == -1)
-            return "Error, el gato ya se encuentra registrado";
-        if(i == -2)
-            return "Error, el archivo no pudo abrirse en modo escritura";
-        return "Operacion exitosa";
-    }
-    else{
-        if(strcmp(p,"BAJA") == 0){
-            char *ptr_nombre = strtok(NULL,"|");
-            int r = modificar_Archivo(ptr_nombre);
-            if(r == -2)
-                return "Error, el gato ya estaba dado de baja";
-            if(r == -1)
-                return "Error, el gato no se encuentra registrado";
-            return "Operacion exitosa";
-        }
-        else{
-            if(strcmp(p,"CONSULTA") == 0){
-                // La accion a realizar es consultar en este caso.
-                char *ptr_nombre = strtok(NULL,"|");
-                if(strcmp(ptr_nombre,"rescatados.txt") == 0){
-                    int r = obtener_Rescatados(ptr_nombre);
-                    if(r == 0)
-                        return "No se hallan gatos rescatados";
-                    else
-                        return "Operacion exitosa";
-                }
-                else{
-                    gato *g = devolver_gato(ptr_nombre);
-                    if(g == NULL)
-                        return "Error, el gato no se encuentra registrado";
-                    char respuesta[2000];
-                    bzero(respuesta,2000);
-                    strcat(respuesta,g->situacion);
-                    strcat(respuesta,"|");
-                    strcat(respuesta,g->nombre);
-                    strcat(respuesta,"|");
-                    strcat(respuesta,g->raza);
-                    strcat(respuesta,"|");
-                    strcat(respuesta,g->sexo);
-                    strcat(respuesta,"|");
-                    strcat(respuesta,g->estado);
-                    //strcat(respuesta,"\0");
-                    free(g);
-                    string res(respuesta);
-                    return res;
-                }
-            }
+
+    srand(time(0)); // Semilla para el generador de números aleatorios
+
+    //Creamos el tablero de juego
+    vector<vector<char>> tablero = generarTablero();
+    vector<vector<bool>> descubiertas(4, vector<bool>(4, false));
+    bool juegoterminado = false;
+    int turnoActual = 0;
+
+    // Esperar hasta que se conecten los jugadores mínimos requeridos
+    while (serverRunning && clientesSockets.size() < cantidadJugadores) {
+        struct sockaddr_in clientConfig;
+        socklen_t clientConfigLen = sizeof(clientConfig);
+        int nuevoSocket = accept(socketEscucha, (struct sockaddr *)&clientConfig, &clientConfigLen);
+        if (nuevoSocket >= 0) {
+            clientesSockets.push_back(nuevoSocket);
+            jugadores.push_back(Jugador{0});
+            cout << "Nuevo jugador conectado. Total jugadores: " << clientesSockets.size() << endl;
         }
     }
-    return NULL;
+
+    while (serverRunning && !juegoterminado) {
+        int jugadorIndex = turnoActual % clientesSockets.size();
+        int clienteSocket = clientesSockets[jugadorIndex];
+
+        // Recibir datos del cliente
+        Adivinanza jugada;
+        int bytesRecibidos = recv(clienteSocket, &jugada, sizeof(Adivinanza), 0);
+        if (bytesRecibidos < 0) {
+            cerr << "Error al recibir datos del cliente: " << strerror(errno) << endl;
+            continue;
+        }
+
+        // Procesar la jugada del cliente
+        string resultado = comprobarYActualizarTablero(tablero, descubiertas, jugada.filaLetra1, jugada.columnaLetra1, jugada.filaLetra2, jugada.columnaLetra2);
+
+        // Actualizar puntuación del jugador
+        jugadores[jugadorIndex].puntuacion += jugada.puntuacion;
+
+        // Preparar la respuesta
+        Respuesta respuesta = {resultado, jugadores[jugadorIndex].puntuacion, mostrarTablero(tablero, descubiertas)};
+
+        // Enviar la respuesta al cliente
+        vector<char> datosSerializados = serializarRespuesta(respuesta);
+        send(clienteSocket, datosSerializados.data(), datosSerializados.size(), 0);
+
+        // Verificar si el juego está completo
+        juegoterminado = tableroCompleto(descubiertas);
+
+        // Pasar al siguiente jugador
+        turnoActual++;
+    }
+
+    // Determinar el ganador
+    Jugador ganador = jugadores[0];
+    for (const auto &jugador : jugadores) {
+        if (jugador.puntuacion > ganador.puntuacion) {
+            ganador = jugador;  // Actualiza el ganador si encuentra un jugador con mayor puntuación
+        }
+    }
+
+    // Informa a todos los clientes que el juego ha terminado y quién es el ganador
+    string mensajeFinal = "El juego ha terminado. El ganador es el jugador con " + to_string(ganador.puntuacion) + " puntos.";
+    for (int clienteSocket : clientesSockets) {
+        write(clienteSocket, mensajeFinal.c_str(), mensajeFinal.length());  // Envía el mensaje a cada cliente
+        close(clienteSocket);  // Cierra la conexión con el cliente
+    }
+    close(socketComunicacion);
+    cout << mensajeFinal << endl;  // Imprime el mensaje final en el servidor
+    exit(EXIT_SUCCESS);
 }
 
 
-void eliminar_Sem(){
+
+void eliminar_Sem() {
     sem_close(semaforos[0]);
     sem_unlink("servidorSocket");
 }
 
-void inicializarSemaforos(){
-    semaforos[0] = sem_open("servidorSocket",O_CREAT,0600,1);
+void inicializarSemaforos() {
+    semaforos[0] = sem_open("servidorSocket", O_CREAT, 0600, 1);
     
-    // Si dicho semaforo vale 0 en ese momento significa que ya hay otra instancia de semaforo ejecutando por lo que cerramos el proceso.
+    // Si dicho semáforo vale 0 en ese momento significa que ya hay otra instancia de semáforo ejecutando por lo que cerramos el proceso.
+    // porque carajo mandé el 85, no recuerdo...
     int valorSemServi = 85;
-    sem_getvalue(semaforos[0],&valorSemServi);
-    if(valorSemServi == 0)
+    sem_getvalue(semaforos[0], &valorSemServi);
+    if (valorSemServi == 0)
         exit(EXIT_FAILURE);
 }
 
-void liberar_Recursos(int signum){
+void liberar_Recursos(int signum) {
     eliminar_Sem();
     //creamos una memoria compartida especial donde guardaremos el pid del servidorSocket y el socket de escucha.
     int idAux = shm_open(MemPid, O_CREAT | O_RDWR, 0600);
-    dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux,0);
+    dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux, 0);
     close(idAux);
-    shutdown(pidA->Socket_Escucha,SHUT_RDWR);
-    munmap(pidA,sizeof(dato));
-    shm_unlink("pidServidorSocket");
-    //
-    remove("gatos.txt");
-    remove("salida.txt");
+    shutdown(pidA->Socket_Escucha, SHUT_RDWR);
+    munmap(pidA, sizeof(dato));
+    shm_unlink(MemPid);
     exit(EXIT_SUCCESS);
 }
 
-bool Ayuda(const char *cad)
-{
-    if (!strcmp(cad, "-h") || !strcmp(cad, "--help") )
-    {
-        cout << "Esta script quedara ejecutando en segundo plano como demonio." << endl;
-        cout << "La cual dara servicio a otra script llamada Cliente." << endl;
-        cout << "Dependiendo de lo que desee el cliente, este proceso realizara las correspondientes acciones" << endl;
-        cout << "Alta, registra de poder, al gato en cuestion en el archivo." << endl;
-        cout << "Baja, si dicho gato fue adoptado, modifica el estado de dicho gato en el archivo" << endl;
-        cout << "Consulta, traera algún gato particular o listara todos los gatos rescatados." << endl;
-        cout << "solo se ejecuta de la siguiente manera ./Servidor [IP servidor] [host servidor]" << endl;
-        cout << "Para finalizar el proceso servidor simplemente basta con ejecutar ./Disparador" << endl;
-        return true;
-    }
-    return false;
+bool Ayuda(const char *cad) {
+    if (cad == NULL)
+        return false;
+
+    printf("uso: %s \n", cad);
+    printf("Este programa es un servidor que permite a los clientes conectarse y jugar un juego de parejas.\n");
+    printf("Parámetros:\n");
+    printf("-h, --help\t\tMuestra esta ayuda.\n");
+    printf("-j, --jugadores\t\tNúmero de jugadores.\n");
+    printf("-p, --puerto\t\tNúmero de puerto para la conexión.\n");
+    
+    return true;
 }
 
-int consultarArchivo(const char nombre[21]){
-    ifstream archivo("gatos.txt");
-    if(!archivo.is_open()){
-        return -2;
+vector<vector<char>> generarTablero() {
+    vector<char> todasLetras;
+    for (char letra = 'A'; letra <= 'Z'; ++letra) {
+        todasLetras.push_back(letra);
     }
-    string texto;
-    char gatito[100];
-    char *pch;
-    int cont = 1;
-    getline(archivo,texto);
-    while(getline(archivo,texto)){
-        strcpy(gatito,texto.c_str());
-        //aqui obtenemos la situacion del gato
-        pch = strtok(gatito, "|");
-        //aqui obtenemos el nombre del gato
-        pch = strtok(NULL, "|");
-        if(strcmp(nombre,pch) == 0){
-            archivo.close();
-            return cont;
+
+    // Seleccionar 8 letras aleatorias de todasLetras
+    random_shuffle(todasLetras.begin(), todasLetras.end());
+    vector<char> letrasSeleccionadas(todasLetras.begin(), todasLetras.begin() + 8);
+
+    // Crear pares de las letras seleccionadas
+
+    vector<char> paresLetras;
+    for (char letra : letrasSeleccionadas) {
+        paresLetras.push_back(letra);
+        paresLetras.push_back(letra);
+    }
+
+    // Mezclar los pares de letras
+    random_shuffle(paresLetras.begin(), paresLetras.end());
+
+    // Rellenar el tablero con las letras mezcladas
+    vector<vector<char>> tablero(4, vector<char>(4));
+    int index = 0;
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            tablero[i][j] = paresLetras[index++];
         }
-        cont++;
     }
-    archivo.close();
-    return -1;
+
+    return tablero;
 }
 
-int escribirArchivo(gato *g){
-    if(consultarArchivo(g->nombre) >= 0){
-        return -1;
-    }
-    ofstream archivo;
-    archivo.open("gatos.txt",ios::app);
-    if(archivo.fail()){
-        return -2;
-    }
-    string tmp_situacion(g->situacion);
-    string tmp_nombre(g->nombre);
-    string tmp_raza(g->raza);
-    string tmp_sexo(g->sexo);
-    string tmp_estado(g->estado);
-    archivo << "\n" + tmp_situacion + "|" + tmp_nombre + "|" + tmp_raza + "|" + tmp_sexo + "|" + tmp_estado;
-    archivo.close();
-    return 1;
-}
+// Función para mostrar el tablero y devolver el tablero con celdas visibles y ocultas
+vector<vector<char>> mostrarTablero(const vector<vector<char>>& tablero, const vector<vector<bool>>& descubiertas) {
+    cout << "  0 1 2 3\n";
+    vector<vector<char>> tableroResultado(4, vector<char>(4, '*'));
 
-int modificar_Archivo(const char nombre[21]){
-    int pos = consultarArchivo(nombre);
-    string texto;
-    char gatito[60];
-    char *pch;
-    if(pos == -1 || pos == -2){
-        return -1;
-    }
-    ifstream archivo;
-    archivo.open("gatos.txt",ios::in);
-    if(archivo.fail()){
-        return -1;
-    }
-    //cambiamos el ALTA, por BAJA en dicho gato
-    ofstream auxiliar;
-    auxiliar.open("auxiliar.txt",ios::out);
-    if(auxiliar.fail()){
-        archivo.close();
-        return -1;
-    }
-    int cont = 1;
-    getline(archivo,texto);
-    auxiliar << texto;
-    while(getline(archivo,texto)){
-        strcpy(gatito,texto.c_str());
-        //aqui obtenemos la situacion del gato
-        if(pos == cont){    // es el gato a cambiar la situacion de ALTA a BAJA
-            char *situacionvieja = strtok(gatito,"|");
-            if(strcmp(situacionvieja,"BAJA") == 0){
-                archivo.close();
-                auxiliar.close();
-                remove("auxiliar.txt");
-                return -2;
-            }
-            else{
-                char *nombregato = strtok(NULL,"|");
-                char *raza = strtok(NULL,"|");
-                char *sexo = strtok(NULL,"|");
-                char *estado = strtok(NULL,"|");
-                string tmp_nombregato(nombregato);
-                string tmp_raza(raza);
-                string tmp_sexo(sexo);
-                string tmp_estado(estado);
-                auxiliar << "\nBAJA|" + tmp_nombregato+ "|" + tmp_raza + "|" + tmp_sexo + "|" + tmp_estado;
+    for (int i = 0; i < 4; ++i) {
+        cout << i << " ";
+        for (int j = 0; j < 4; ++j) {
+            if (descubiertas[i][j]) {
+                cout << tablero[i][j] << " ";
+                tableroResultado[i][j] = tablero[i][j];
+            } else {
+                cout << "* ";
             }
         }
-        else{
-            auxiliar << "\n" + texto;
-        }
-        pch = strtok(gatito, "|");
-        //aqui obtenemos el nombre del gato
-        pch = strtok(NULL, "|");
-        cont++;
+        cout << "\n";
     }
-    archivo.close();
-    auxiliar.close();
-    remove("gatos.txt");
-    rename("auxiliar.txt","gatos.txt");
-    return 0;
+
+    return tableroResultado;
+}
+// Función para verificar si el tablero está completo es decir, con ella luego de completar la posición solicitada por el cliente tenemos que comprobar si la matriz esta con todos los valores descubiertos
+bool tableroCompleto(const vector<vector<bool>>& descubiertas) {
+    for (const auto& fila : descubiertas) {
+        for (bool descubierta : fila) {
+            if (!descubierta) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
-gato* devolver_gato(const char nombre[21]){
-    gato *g = (gato*) malloc(sizeof(gato));
-    ifstream archivo;
-    string texto;
-    char gatito[100];
-    char *pch;
-    char situacion[5];
-    archivo.open("gatos.txt",ios::in);
-    if(archivo.fail()){
-        return NULL;
-    }
-    getline(archivo,texto);
-    while(getline(archivo,texto)){
-        strcpy(gatito,texto.c_str());
-        //aqui obtenemos la situacion del gato
-        pch = strtok(gatito, "|");
-        strcpy(situacion,pch);
-        //aqui obtenemos el nombre del gato
-        pch = strtok(NULL, "|");
-        if(strcmp(nombre,pch) == 0){
-            strcpy(g->situacion,situacion);
-            strcpy(g->nombre,pch);
-            pch = strtok(NULL, "|");
-            strcpy(g->raza, pch);
-            pch = strtok(NULL, "|");
-            strcpy(g->sexo,pch);
-            pch = strtok(NULL, "|");
-            strcpy(g->estado, pch);
-            archivo.close();
-            return g;
-        }
-    }
-    free(g);
-    archivo.close();
-    return NULL;
+// Función para comprobar y actualizar el tablero de descubiertas
+string comprobarYActualizarTablero(vector<vector<char>>& tablero, vector<vector<bool>>& descubiertas, int fila1, int col1, int fila2, int col2) {
+    // Verificar si las posiciones están dentro de los límites del tablero
+    if (fila1 < 0 || fila1 >= 4 || col1 < 0 || col1 >= 4 || fila2 < 0 || fila2 >= 4 || col2 < 0 || col2 >= 4)
+        return "Posiciones fuera de los límites del tablero.";
+
+    // Verificar si las letras en las dos posiciones coinciden
+    if (tablero[fila1][col1] == tablero[fila2][col2]) {
+        descubiertas[fila1][col1] = true;
+        descubiertas[fila2][col2] = true;
+        return "¡Pareja encontrada!";
+    } else
+        return "Las casillas no coinciden.";
 }
 
-int obtener_Rescatados(const char *path){
-    ifstream archivo1;
-    ofstream archivo2;
-    string texto;
-    char gatito[100];
-    char *pch;
-    archivo1.open("gatos.txt",ios::in);
-    if(archivo1.fail())
-        return -1;
-    string tempString(path);
-    archivo2.open(tempString,ios::out);
-    if(archivo2.fail()){
-        archivo1.close();
-        return -2;
-    }
-    int cont = 0;
-    while(getline(archivo1,texto)){
-        strcpy(gatito,texto.c_str());
-        if(strcmp(gatito,"") == 0)
-            break;
-        pch = strtok(gatito, "|");
-        if(strcmp(pch,"ALTA") == 0) {     //consideramos a los gatos en situación de ALTA como rescatados.
-            archivo2 << texto << endl;
-            cont++;
+// Función para serializar la estructura Respuesta
+vector<char> serializarRespuesta(const Respuesta& resp) {
+    vector<char> data;
+
+    // Serializar la cadena 'respuesta'
+    int respuestaLength = resp.respuesta.length();
+    data.insert(data.end(), reinterpret_cast<const char*>(&respuestaLength), reinterpret_cast<const char*>(&respuestaLength) + sizeof(respuestaLength));
+    data.insert(data.end(), resp.respuesta.begin(), resp.respuesta.end());
+
+    // Serializar 'puntuacion'
+    data.insert(data.end(), reinterpret_cast<const char*>(&resp.puntuacion), reinterpret_cast<const char*>(&resp.puntuacion) + sizeof(resp.puntuacion));
+
+    // Serializar 'tableroActual'
+    for (const auto& fila : resp.tableroActual) {
+        for (char c : fila) {
+            data.push_back(c);
         }
     }
-    archivo1.close();
-    archivo2.close();
-    return cont;
+
+    return data;
 }
+
