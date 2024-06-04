@@ -1,4 +1,4 @@
-all: cliente servidor disparador
+all: cliente servidor
 
 servidor:
 	g++ servidor.cpp -o servidor -lpthread -lrt

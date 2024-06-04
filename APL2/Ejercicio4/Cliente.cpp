@@ -1,20 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <semaphore.h>
-#include <time.h>
+#include <signal.h>
 #include <cstring>
+#include <time.h>
+#include <sys/file.h>
 
 #define FILAS 4
 #define COLUMNAS 4
 #define TOTAL_PARES 8
 
-const char *MEMORIA_COMPARTIDA = "memoria_compartida";
+const char *MEMORIA_COMPARTIDA = "/memoria_compartida";
 const char *SEM_CLIENTE = "/sem_cliente";
 const char *SEM_SERVIDOR = "/sem_servidor";
+const char *LOCK_FILE = "/tmp/cliente_memoria.lock";
 
 struct MemoriaCompartida
 {
@@ -22,15 +24,18 @@ struct MemoriaCompartida
     int descubierto[FILAS][COLUMNAS];
     int paresEncontrados;
     int jugadas[2][2]; // Para almacenar las coordenadas de las jugadas del cliente
+    pid_t cliente_pid; // Agrega esta línea
 };
 
-struct MemoriaCompartida *memoria;
 int shm_fd;
+int lock_fd;
+struct MemoriaCompartida *memoria;
 sem_t *sem_cliente, *sem_servidor;
 
-void manejarSIGINT(int signal)
+void manejarSIGUSR1(int signal)
 {
-    // Ignorar SIGINT
+    printf("Recibida señal SIGUSR1. Finalizando cliente...\n");
+    exit(0);
 }
 
 void mostrarTablero()
@@ -45,48 +50,38 @@ void mostrarTablero()
             }
             else
             {
-                printf("* ");
+                printf("- ");
             }
         }
         printf("\n");
     }
 }
 
-bool ayuda(const char *cad)
-{
-    if (!strcmp(cad, "-h") || !strcmp(cad, "--help"))
-    {
-        printf("Esta script permite Implementar el clásico juego de la memoria Memotest, pero alfabético.\n");
-        printf("Deberá existir un proceso Cliente, cuya tarea será mostrar por pantalla el estado actual del tablero y leer desde teclado el par de casillas que el usuario quiere destapar\n");
-        printf("También existirá un proceso Servidor, que será el encargado de actualizar el estado del tablero en base al par de casillas ingresado,así como controlar la finalización partida");
-        return true;
-    }
-    return false;
-}
 int main(int argc, char *argv[])
 {
-    if (argc > 1)
-    {
-        if ((strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0))
-        {
-            ayuda(argv[1]);
-            exit(EXIT_SUCCESS);
-        }
-        else
-        {
-            printf("Error, el cliente no debe recibir parametros");
-            exit(EXIT_FAILURE);
-        }
-    }
-    signal(SIGINT, manejarSIGINT);
+    signal(SIGUSR1, manejarSIGUSR1);
 
-    // Abrir y mapear memoria compartida
+    lock_fd = open(LOCK_FILE, O_CREAT | O_RDWR, 0666);
+    if (lock_fd == -1)
+    {
+        perror("Error al crear archivo de bloqueo");
+        exit(EXIT_FAILURE);
+    }
+    if (flock(lock_fd, LOCK_EX | LOCK_NB) == -1)
+    {
+        perror("Error: otro cliente ya está en ejecución");
+        close(lock_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Abrir memoria compartida
     shm_fd = shm_open(MEMORIA_COMPARTIDA, O_RDWR, 0666);
     if (shm_fd == -1)
     {
         perror("Error al abrir memoria compartida");
         exit(EXIT_FAILURE);
     }
+
     memoria = (struct MemoriaCompartida *)mmap(NULL, sizeof(struct MemoriaCompartida), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (memoria == MAP_FAILED)
     {
@@ -109,47 +104,37 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    memoria->cliente_pid = getpid(); // Agrega esta línea
     time_t start, end;
     double elapsed;
     time(&start);
-
-    sem_post(sem_cliente); // Conectar al servidor
-
     while (1)
     {
+        time(&end);
+        elapsed = difftime(end, start);
+        printf("Tiempo tomado: %.2f segundos\n", elapsed);
         mostrarTablero();
-        int fila1, col1, fila2, col2;
-        printf("Ingrese la primera casilla (fila y columna): ");
-        scanf("%d %d", &fila1, &col1);
-        printf("Ingrese la segunda casilla (fila y columna): ");
-        scanf("%d %d", &fila2, &col2);
+        printf("Ingrese las coordenadas de la primera carta (fila columna): ");
+        scanf("%d %d", &memoria->jugadas[0][0], &memoria->jugadas[0][1]);
+        printf("Ingrese las coordenadas de la segunda carta (fila columna): ");
+        scanf("%d %d", &memoria->jugadas[1][0], &memoria->jugadas[1][1]);
 
-        memoria->jugadas[0][0] = fila1;
-        memoria->jugadas[0][1] = col1;
-        memoria->jugadas[1][0] = fila2;
-        memoria->jugadas[1][1] = col2;
+        sem_post(sem_cliente);  // Notifica al servidor que el cliente ha hecho una jugada
+        sem_wait(sem_servidor); // Espera a que el servidor procese la jugada
 
-        sem_post(sem_cliente); // Informar al servidor de la jugada
-
-        sem_wait(sem_servidor); // Esperar a que el servidor procese la jugada
-
-        // Mostrar el tablero actualizado
-        mostrarTablero();
-
+        // Verifica si el juego ha terminado
         if (memoria->paresEncontrados == TOTAL_PARES)
         {
-            printf("¡Juego terminado! Todos los pares encontrados.\n");
+            printf("¡Felicitaciones! Encontraste todos los pares.\n");
             break;
         }
     }
 
-    time(&end);
-    elapsed = difftime(end, start);
-    printf("Tiempo tomado: %.2f segundos\n", elapsed);
-
-    sem_post(sem_cliente); // Desconectar del servidor
-
+    // Cerrar recursos
     munmap(memoria, sizeof(struct MemoriaCompartida));
+    close(shm_fd);
+    sem_close(sem_cliente);
+    sem_close(sem_servidor);
 
     return 0;
 }
