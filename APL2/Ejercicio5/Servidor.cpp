@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <atomic>
+#include <sys/param.h>
 
 using namespace std;
 
@@ -38,7 +39,7 @@ typedef struct {
     int filaLetra2;
     int columnaLetra2;
     int puntuacion;
-} Adininanza;
+} Adivinanza;
 
 typedef struct {
     string respuesta;
@@ -91,8 +92,7 @@ void signalHandler(int signum) {
         write(clienteSocket, mensajeFinal.c_str(), mensajeFinal.length());  // Envía el mensaje a cada cliente
         close(clienteSocket);  // Cierra la conexión con el cliente
     }
-    close(socketComunicacion);
-    liberar_Recursos();
+    liberar_Recursos(signum);
 }
 
 
@@ -311,6 +311,7 @@ int main(int argc, char *argv[]){
     }
     close(socketEscucha);
     cout << mensajeFinal << endl;  // Imprime el mensaje final en el servidor
+    liberar_Recursos(1);
     exit(EXIT_SUCCESS);
 }
 
