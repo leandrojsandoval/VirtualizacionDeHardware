@@ -309,7 +309,7 @@ int main(int argc, char *argv[]){
         write(clienteSocket, mensajeFinal.c_str(), mensajeFinal.length());  // Envía el mensaje a cada cliente
         close(clienteSocket);  // Cierra la conexión con el cliente
     }
-    close(socketComunicacion);
+    close(socketEscucha);
     cout << mensajeFinal << endl;  // Imprime el mensaje final en el servidor
     exit(EXIT_SUCCESS);
 }

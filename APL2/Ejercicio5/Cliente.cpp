@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <atomic>
 
+
 using namespace std;
 
 typedef struct {
@@ -37,6 +38,9 @@ typedef struct {
     int puntuacion;
     vector<vector<char>> tableroActual;
 } Respuesta;
+
+// Utilizamos atomic para seguridad en hilos
+atomic<bool> clientRunning(true);  
 
 void signalHandler(int signum) {
     cout << "Interrupción recibida: " << signum << endl;
@@ -125,8 +129,6 @@ int main() {
 
     signal(SIGINT, signalHandler);
 
-    // Utilizamos atomic para seguridad en hilos
-    atomic<bool> clientRunning(true);  
     Adivinanza jugada;
     jugada.puntuacion = 0;
     while (clientRunning) {
