@@ -26,74 +26,77 @@
 #include <mutex>
 #include <unordered_map>
 #include <filesystem>
-
+#include <cstring>
 using namespace std;
+namespace fs = filesystem;
 
 // Función para contar números en un archivo
-void contar_numeros_en_archivo(const string& archivo, unordered_map<char, int>& conteo_numeros, mutex& mtx, int thread_id) {
-    ifstream file(archivo);
-    if (!file.is_open()) {
-        cerr << "No se pudo abrir el archivo: " << archivo << endl;
-        return;
-    }
-
-    unordered_map<char, int> conteo_local;
-    char c;
-    while (file.get(c)) {
-        if (isdigit(c)) {
-            conteo_local[c]++;
+void contar_numeros_en_archivo(const vector<string>& archivos, unordered_map<char, int>& conteo_numeros, mutex& mtx, int thread_id) {
+    for (const auto& archivo : archivos) {
+        ifstream file(archivo);
+        if (!file.is_open()) {
+            cerr << "No se pudo abrir el archivo: " << archivo << endl;
+            continue;
         }
-    }
 
-    file.close();
-
-    // Imprimir resultados por hilo
-    {
-        lock_guard<mutex> lock(mtx);
-        cout << "Thread " << thread_id << ": Archivo leído " << archivo << ". Apariciones: ";
-        for (char c = '0'; c <= '9'; ++c) {
-            cout << c << "=" << conteo_local[c] << ", ";
-            conteo_numeros[c] += conteo_local[c];
+        unordered_map<char, int> conteo_local;
+        char c;
+        while (file.get(c)) {
+            if (isdigit(c)) {
+                conteo_local[c]++;
+            }
         }
-        cout << endl;
+        file.close();
+
+        // Imprimir los resultados del hilo y archivo actual
+        {
+            lock_guard<mutex> lock(mtx);
+            cout << "Thread " << thread_id << ": Archivo leído " << archivo << ". Apariciones: ";
+            for (char c = '0'; c <= '9'; ++c) {
+                cout << c << "=" << conteo_local[c] << ", ";
+            }
+            cout << endl;
+
+            for (const auto& [num, count] : conteo_local) {
+                conteo_numeros[num] += count;
+            }
+        }
     }
 }
 
-// Función principal para procesar archivos en el directorio
-void procesar_archivos_en_directorio(const string& directorio, int nivel_paralelismo, bool generar_archivo,  const string& archivo_salida) {
+void procesar_archivos_en_directorio(const string& directorio, int nivel_paralelismo, bool generar_archivo, const string& archivo_salida) {
     vector<thread> threads;
     unordered_map<char, int> conteo_numeros;
     mutex mtx;
 
     vector<string> archivos;
-    for (const auto& entrada : filesystem::directory_iterator(directorio)) {
+    for (const auto& entrada : fs::directory_iterator(directorio)) {
         if (entrada.path().extension() == ".txt") {
             archivos.push_back(entrada.path().string());
         }
     }
 
-    size_t archivo_count = archivos.size();
-    for (size_t i = 0; i < archivo_count; i += nivel_paralelismo) {
-        size_t end = min(i + nivel_paralelismo, archivo_count);
-        for (size_t j = i; j < end; ++j) {
-            threads.emplace_back(contar_numeros_en_archivo, archivos[j], ref(conteo_numeros), ref(mtx), j+1);
-        }
+    size_t archivos_por_thread = archivos.size() / nivel_paralelismo;
+    size_t archivos_restantes = archivos.size() % nivel_paralelismo;
 
-        // Esperar a que todos los hilos terminen
-        for (auto& thread : threads) {
-            thread.join();
-        }
-        threads.clear();
+    size_t inicio = 0;
+    for (int i = 0; i < nivel_paralelismo; ++i) {
+        size_t fin = inicio + archivos_por_thread + (i < archivos_restantes ? 1 : 0);
+        vector<string> archivos_subset(archivos.begin() + inicio, archivos.begin() + fin);
+        threads.emplace_back(contar_numeros_en_archivo, archivos_subset, ref(conteo_numeros), ref(mtx), i + 1);
+        inicio = fin;
     }
 
-    // Imprimir resultados totales
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
     cout << "Finalizado lectura: Apariciones total: ";
     for (char c = '0'; c <= '9'; ++c) {
         cout << c << "=" << conteo_numeros[c] << ", ";
     }
     cout << endl;
 
-    // Generar archivo de salida si se especifica
     if (generar_archivo) {
         ofstream outfile(archivo_salida);
         if (outfile.is_open()) {
@@ -106,6 +109,7 @@ void procesar_archivos_en_directorio(const string& directorio, int nivel_paralel
         }
     }
 }
+
 int main(int argc, char* argv[]) {
     if (argc < 5) {
         cerr << "Uso: " << argv[0] << " -t <nivel_paralelismo> -i <directorio> [-o <archivo_salida>]" << endl;
@@ -138,3 +142,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+

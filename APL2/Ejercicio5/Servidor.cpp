@@ -25,6 +25,8 @@
 #include <csignal>
 #include <atomic>
 #include <sys/param.h>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -57,6 +59,8 @@ atomic<bool> serverRunning(true);
 vector<Jugador> jugadores;
 vector<int> clientesSockets;
 vector<int> nuevosClientesSockets;
+unordered_map<int, chrono::steady_clock::time_point> lastHeartbeat;
+
 
 sem_t* semaforos[1];
 
@@ -93,6 +97,27 @@ void signalHandler(int signum) {
         close(clienteSocket);  // Cierra la conexión con el cliente
     }
     liberar_Recursos(signum);
+}
+
+
+//Verifica la actividad del cliente y cierra las conexiones de clientes inactivos
+void checkHeartbeats() {
+    while (serverRunning) {
+        this_thread::sleep_for(chrono::seconds(5)); // Verificar latidos cada 5 segundos
+        auto currentTime = chrono::steady_clock::now();
+        for (auto it = lastHeartbeat.begin(); it != lastHeartbeat.end();) {
+            auto elapsedTime = chrono::duration_cast<chrono::seconds>(currentTime - it->second).count();
+            if (elapsedTime >= 10) { // Considerar un cliente como inactivo si no ha enviado un latido en los últimos 10 segundos
+                // Cerrar la conexión del cliente y eliminarlo del registro de latidos
+                int clientSocket = it->first;
+                lastHeartbeat.erase(it++);
+                close(clientSocket);
+                // También puedes agregar código adicional aquí para liberar otros recursos asociados con el cliente
+            } else {
+                ++it;
+            }
+        }
+    }
 }
 
 
@@ -251,6 +276,9 @@ int main(int argc, char *argv[]){
     bool juegoterminado = false;
     int turnoActual = 0;
 
+    // Crear un hilo para verificar los latidos del cliente
+    thread heartbeatThread(checkHeartbeats);
+
     // Esperar hasta que se conecten los jugadores mínimos requeridos
     while (serverRunning && clientesSockets.size() < cantidadJugadores) {
         struct sockaddr_in clientConfig;
@@ -309,7 +337,10 @@ int main(int argc, char *argv[]){
         write(clienteSocket, mensajeFinal.c_str(), mensajeFinal.length());  // Envía el mensaje a cada cliente
         close(clienteSocket);  // Cierra la conexión con el cliente
     }
-    close(socketEscucha);
+
+    // Esperar a que termine el hilo de verificación de latidos antes de salir
+    heartbeatThread.join();
+
     cout << mensajeFinal << endl;  // Imprime el mensaje final en el servidor
     liberar_Recursos(1);
     exit(EXIT_SUCCESS);
@@ -350,7 +381,7 @@ bool Ayuda(const char *cad) {
         return false;
 
     printf("uso: %s \n", cad);
-    printf("Este programa es un servidor que permite a los clientes conectarse y jugar un juego de parejas.\n");
+    printf("Este programa es un servidor que permite a N cientes jugar Memotest.\n");
     printf("Parámetros:\n");
     printf("-h, --help\t\tMuestra esta ayuda.\n");
     printf("-j, --jugadores\t\tNúmero de jugadores.\n");

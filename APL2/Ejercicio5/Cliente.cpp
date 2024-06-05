@@ -139,6 +139,11 @@ int main() {
         cin >> fila2 >> col2;
 
         jugada = {fila1, col1, fila2, col2, jugada.puntuacion};
+
+        // Enviar un latido al servidor para indicar que el cliente sigue activo
+        string heartbeatMsg = "Heartbeat";
+        send(clienteSocket, heartbeatMsg.c_str(), heartbeatMsg.length(), 0);
+
         if (send(clienteSocket, &jugada, sizeof(Adivinanza), 0) < 0) {
             cerr << "Error al enviar datos al servidor: " << strerror(errno) << endl;
             break;
