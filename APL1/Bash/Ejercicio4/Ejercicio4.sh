@@ -143,6 +143,9 @@ iniciarDemonio() {
 		#lanzamos el proceso en segundo plano
 		nohup bash $0 "$1" "$2" "$3" "$4" "$5" "$6" "$7" 2>/dev/null &
 	else
+		nombrescript=$(readlink -f "$0")
+		dir_base=$(dirname "$nombrescript")
+
 		#por aca debería pasar la segunda ejecución pudiendo almacenar el PID del proceso para luego eliminarlo.
 		#Tambien se inicia el loop
    	    pidFile="$dir_base/$$.pid";
@@ -155,6 +158,8 @@ iniciarDemonio() {
 eliminarDemonioUnDirectorio() {
     # Directorio a monitorear pasado como argumento
     dir_monitoreado=$(realpath "$1" | tr -d '[:space:]')
+	echo "$dir_monitoreado"
+	echo "$dir_base"
     # Obtenemos todos los demonios creados en anteriores scripts
     demonios=($(find "$dir_base" -name "*.pid" -type f))
     if [[ "${#demonios[*]}" == 0 ]]; then
@@ -206,55 +211,71 @@ mostrarAyuda() {
 	echo "En caso de querer terminar el proceso escribimos bash $0 [-d | --directorio] [Directorio de monitoreo a detener] [-k | --kill]"
 }
 
-nombreScript=$(readlink -f $0)
-dir_base=`dirname "$nombreScript"`
-posi="$1"
-if [[ "$1" == "-nohup-" ]]; 
-then
-	shift;	##borra el nohup y corre las demas variables una posición.
-else # si no es igual a -nohup- significa que es la primer vuelta y apenas se comenzo a ejecutar el proceso por lo que aqui es donde tengo qeu crear las fifos donde se almacenaran la fecha inicial.
-	if [[ (("$1" == "-d" || "$1" == "--directorio") && $# != 3 ) && ( ("$1" == "-d" || "$1" == "--directorio") && $# != 6) ]]
-	then
-		echo "Error: cantidad de parametros errónea"
-		exit 1;
-	fi
-	if [[ ("$1" == "-h" || "$1" == "--help" || "$1" == "-?" ) && $# != 1 ]]
-	then
-		echo "Error: cantidad de parametros errónea"
-		exit 1;
-	fi
+# Procesamiento de argumentos con getopt
+if [[ "$1" == "-nohup-" ]]; then
+    shift # Elimina el -nohup- de los argumentos
+	iniciarDemonio "$1" "$2" "$4" "$6"
+else
+	#por aqui debería de pasar la primera vez. luego la segunda con el nohup
+    TEMP=$(getopt -o d:s:p:hk --long directorio:,salida:,patron:,help,kill -n "$0" -- "$@")
+    if [ $? != 0 ]; then
+        echo "Error: fallo en la interpretacion de los argumentos" >&2
+        exit 1
+    fi
+    eval set -- "$TEMP"
 fi
 
+while true; do
+    case "$1" in
+        -d|--directorio)
+            DIRECTORIO="$2"
+            shift 2
+            ;;
+        -s|--salida)
+            SALIDA="$2"
+            shift 2
+            ;;
+        -p|--patron)
+            PATRON="$2"
+            shift 2
+            ;;
+        -h|--help)
+            mostrarAyuda
+            exit 0
+            ;;
+        -k|--kill)
+            KILL="true"
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Error: Parametro no reconocido $1"
+            mostrarAyuda
+            exit 1
+            ;;
+    esac
+done
 
-case "$1" in
-  '-d' | '--directorio')
-	if [[ "$posi" != "-nohup-" ]]; 
-	then
-		#por primera ves debería pasar por aca.
-		if [[ $# == 3 ]]
-		then
-			if [ ! -d "$2" ];
-			then
-				echo "Error: \"$2\" no es un directorio"
-				mostrarAyuda
-				exit 1;
-			fi
-			eliminarDemonioUnDirectorio "$2"
-			#eliminarDemonio
-		else
-			validarParametros "$2" "$3" "$4" "$5" "$6"
-			iniciarDemonio "-nohup-" $1 "$2" $3 "$4" $5 "$6"
-		fi
-	else
-			#por aqui pasa la segunda
-			#-d dirMonitoreo DirSalida patron
-			iniciarDemonio "$1" "$2" "$4" "$6"
-	fi
-    ;;
-  '-h' | '--help' | '-?')
-	mostrarAyuda
-	exit 1
-    ;;
-  *)
-  echo "Obtener ayuda $0 [ -h | -help | -? ]"
-esac
+
+#por aca solo pasa la primer ejecucion
+
+nombreScript=$(readlink -f $0)
+dir_base=`dirname "$nombreScript"`
+
+if [[ "$KILL" == "true" ]]; then
+	echo "$DIRECTORIO"
+    eliminarDemonioUnDirectorio "$DIRECTORIO"
+    exit 0
+fi
+
+if [[ -z "$DIRECTORIO" || -z "$SALIDA" || -z "$PATRON" ]]; then
+    echo "Error: falta algún argumento obligatorio."
+    mostrarAyuda
+    exit 1
+fi
+
+validarParametros "$DIRECTORIO" "-s" "$SALIDA" "-p" "$PATRON"
+iniciarDemonio "-nohup-" "-d" "$DIRECTORIO" "-s" "$SALIDA" "-p" "$PATRON"

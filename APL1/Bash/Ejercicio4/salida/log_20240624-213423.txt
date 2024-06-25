@@ -1,0 +1,1 @@
+El patrón fue encontrado en el archivo: ./monitor/good morning.txt la coincidencia se ha guardado en ./salida/20240624-213423.tar.gz

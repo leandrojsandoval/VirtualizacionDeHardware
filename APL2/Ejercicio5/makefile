@@ -1,14 +1,14 @@
 all: cliente servidor disparador
 
 servidor:
-	g++ Servidor.cpp -o Servidor -lpthread -lrt
+	g++ ServidorPrueba.cpp -o ServidorPrueba -lpthread -lrt
 
 cliente: 
-	g++ Cliente.cpp -o Cliente -lpthread -lrt
+	g++ ClienteP.cpp -o ClienteP -lpthread -lrt
 disparador:
 	g++ Disparador.cpp -o Disparador -lpthread -lrt
 
 clean:
-	rm Servidor
-	rm Cliente
+	rm ServidorPrueba
+	rm ClienteP
 	rm Disparador
