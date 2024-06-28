@@ -1,1 +1,0 @@
-El patrón fue encontrado en el archivo: /mnt/c/Users/pc/desktop/GitPibes/VirtualizacionDeHardware-UNLaM/bash/Ejercicio04/monitor/monitor3/holanda.txt la coincidencia se ha guardado en /mnt/c/Users/pc/desktop/GitPibes/VirtualizacionDeHardware-UNLaM/bash/Ejercicio04/salida/20240507-003055.tar.gz
