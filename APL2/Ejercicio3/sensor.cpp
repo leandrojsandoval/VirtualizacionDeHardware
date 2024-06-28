@@ -24,86 +24,85 @@
 #include <fcntl.h>
 #include <string.h>
 #include <time.h>
-#include <sys/stat.h>
+#include <getopt.h>
+#include <ctype.h>
 
 using namespace std;
 
 const char* FIFO_NAME = "/tmp/sensor_fifo";
 
-// int main(int argc, char* argv[]) {
+void print_help() {
+    printf("Usage: sensor [OPTIONS]\n");
+    printf("Options:\n");
+    printf("  -n, --numero <sensor_number>    Sensor number (integer)\n");
+    printf("  -s, --segundos <seconds>        Interval in seconds (integer)\n");
+    printf("  -m, --mensajes <messages>       Number of messages (integer)\n");
+    printf("  -h, --help                      Display this help message\n");
+}
 
-//     int sensorNumber = -1;
-//     int interval = -1;
-//     int messageCount = -1;
+int is_numeric(const char *str) {
+    for (int i = 0; str[i] != '\0'; ++i) {
+        if (!isdigit(str[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}
 
-//     // Recorre los argumentos de línea de comandos
-//     for (int i = 1; i < argc; ++i) {
-//         // Comprueba si el argumento actual es "-n" y que haya un siguiente argumento
-//         if (string(argv[i]) == "-n" && i + 1 < argc) {
-//             sensorNumber = stoi(argv[++i]); // Asigna el siguiente argumento a sensorNumber
-//         } else if (string(argv[i]) == "-s" && i + 1 < argc) {
-//             interval = stoi(argv[++i]); // Asigna el siguiente argumento a interval
-//         } else if (string(argv[i]) == "-m" && i + 1 < argc) {
-//             messageCount = stoi(argv[++i]); // Asigna el siguiente argumento a messageCount
-//         }
-//     }
-
-
-//      // Comprueba que todos los parámetros requeridos hayan sido proporcionados
-//     if (sensorNumber == -1 || interval == -1 || messageCount == -1) {
-//         cerr << "Usage: " << argv[0] << " -n <sensor number> -s <seconds interval> -m <messages count>" << endl;
-//         return 1;
-//     }
-
-//     //Se abre el FIFO en modo escritura (O_WRONLY).
-//     int fd = open(FIFO_NAME, O_WRONLY);
-//     if (fd == -1) {
-//         cerr << "Failed to open FIFO" << endl;
-//         return 1;
-//     }
-
-//     // Inicializa el generador de números aleatorios
-//     srand(time(nullptr));
-
-//     // Bucle para enviar las mediciones
-//     for (int i = 0; i < messageCount; ++i) {
-//         int measurement = rand() % 100; // Genera una medición aleatoria
-//         string message = "Sensor " + to_string(sensorNumber) + ": " + to_string(measurement);
-//         write(fd, message.c_str(), message.size()); // Escribe el mensaje en el FIFO
-//         //sleep(interval); // Espera el intervalo especificado
-//     }
-
-//     // Cierra el FIFO
-//     close(fd);
-//     return 0;
-// }
 
 int main(int argc, char *argv[]) {
-    if (argc != 7) {
-        fprintf(stderr, "Usage: %s -n <sensor_number> -s <seconds> -m <messages>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
 
     int sensor_number = -1;
     int seconds = -1;
     int messages = -1;
 
+    const struct option long_options[] = {
+        {"numero", required_argument, 0, 'n'},
+        {"segundos", required_argument, 0, 's'},
+        {"mensajes", required_argument, 0, 'm'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+
     int opt;
-    while ((opt = getopt(argc, argv, "n:s:m:")) != -1) {
+    int long_index = 0;
+    while ((opt = getopt_long(argc, argv, "n:s:m:h", long_options, &long_index)) != -1) {
         switch (opt) {
             case 'n':
+                if (!is_numeric(optarg)) {
+                    fprintf(stderr, "Sensor number must be a positive integer\n");
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
                 sensor_number = atoi(optarg);
                 break;
             case 's':
+                if (!is_numeric(optarg)) {
+                    fprintf(stderr, "Seconds must be a positive integer\n");
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
                 seconds = atoi(optarg);
                 break;
             case 'm':
+                if (!is_numeric(optarg)) {
+                    fprintf(stderr, "Messages must be a positive integer\n");
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
                 messages = atoi(optarg);
                 break;
+            case 'h':
             default:
-                fprintf(stderr, "Usage: %s -n <sensor_number> -s <seconds> -m <messages>\n", argv[0]);
+                print_help();
                 exit(EXIT_FAILURE);
         }
+    }
+
+    if (sensor_number <= 0 || seconds <= 0 || messages <= 0) {
+        fprintf(stderr, "All parameters must be positive integers\n");
+        print_help();
+        exit(EXIT_FAILURE);
     }
 
     if (sensor_number == -1 || seconds == -1 || messages == -1) {

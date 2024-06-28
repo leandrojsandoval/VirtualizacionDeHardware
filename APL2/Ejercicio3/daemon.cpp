@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
+#include <getopt.h>
 
 
 using namespace std;
@@ -44,6 +45,21 @@ void cleanup() {
     unlink(FIFO_NAME); // Elimina el FIFO
 }
 
+void print_help() {
+    printf("Usage: daemon [OPTIONS]\n");
+    printf("Options:\n");
+    printf("  -l, --log <logfile>    Path to log file\n");
+    printf("  -h, --help             Display this help message\n");
+}
+
+void validate_logfile(const char *logfile) {
+    struct stat path_stat;
+    stat(logfile, &path_stat);
+    if (S_ISDIR(path_stat.st_mode)) {
+        fprintf(stderr, "Log file cannot be a directory\n");
+        exit(EXIT_FAILURE);
+    }
+}
 
 void write_log(const char *logfile, const char *message) {
     FILE *file = fopen(logfile, "a");
@@ -58,30 +74,35 @@ void write_log(const char *logfile, const char *message) {
 int main(int argc, char *argv[]) {
 
     cout << "PID del proceso: " << getpid() << endl;
-
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s -l <logfile>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
     char *logfile = NULL;
 
+    static struct option long_options[] = {
+        {"log", required_argument, 0, 'l'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+
     int opt;
-    while ((opt = getopt(argc, argv, "l:")) != -1) {
+    int long_index = 0;
+    while ((opt = getopt_long(argc, argv, "l:h", long_options, &long_index)) != -1) {
         switch (opt) {
             case 'l':
                 logfile = optarg;
                 break;
+            case 'h':
             default:
-                fprintf(stderr, "Usage: %s -l <logfile>\n", argv[0]);
+                print_help();
                 exit(EXIT_FAILURE);
         }
     }
+
 
     if (logfile == NULL) {
         fprintf(stderr, "Log file is required\n");
         exit(EXIT_FAILURE);
     }
+
+    validate_logfile(logfile);
 
     signal(SIGTERM, handle_signal);
     signal(SIGINT, handle_signal);
