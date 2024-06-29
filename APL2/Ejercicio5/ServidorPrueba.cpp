@@ -45,6 +45,7 @@ typedef struct{
 typedef struct {
     int puntuacion;
     int idJugador;
+    char nickname[50];  // Ajustar el tamaño según se necesite
 } Jugador;
 
 list<Jugador> clientesSockets;
