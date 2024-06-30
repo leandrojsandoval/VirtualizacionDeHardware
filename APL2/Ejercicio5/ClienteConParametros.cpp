@@ -74,15 +74,21 @@ int main(int argc, char *argv[]) {
                 server_ip[sizeof(server_ip) - 1] = '\0';  // Asegurar la terminación en nulo
                 break;
             case 'h':
-                mostrarAyuda();
-                exit(EXIT_SUCCESS);
+                if(argc != 2){
+                    printf("Error en parametros enviados\n");
+                    exit(EXIT_FAILURE);
+                }else{
+                    mostrarAyuda();
+                    exit(EXIT_SUCCESS);
+                }
+
             default:
                 fprintf(stderr, "Opción no reconocida\n");
                 exit(EXIT_FAILURE);
         }
     }
 
-    if (port == -1 || strlen(nickname) == 0 || strlen(server_ip) == 0) {
+    if (port == -1 || strlen(nickname) == 0 || strlen(server_ip) == 0 || argc != 7) {
         fprintf(stderr, "Debe especificar el nickname, el puerto y el servidor.\n");
         mostrarAyuda();
         exit(EXIT_FAILURE);

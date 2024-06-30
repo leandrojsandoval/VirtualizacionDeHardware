@@ -101,6 +101,7 @@ pair<int, list<Jugador>> obtenerGanadores();
 
 void cerrarSocketsClientes();
 
+
 int main(int argc, char *argv[]) {
     int opt;
     int port = -1;
@@ -122,21 +123,27 @@ int main(int argc, char *argv[]) {
                 max_clients = atoi(optarg);
                 break;
             case 'h':
-                mostrarAyuda();
-                exit(EXIT_SUCCESS);
+                if(argc != 2){
+                    printf("Error en enviar parametros\n");
+                    exit(EXIT_FAILURE);
+                }
+                else{
+                    mostrarAyuda();
+                    exit(EXIT_SUCCESS);
+                }
+
             default:
                 fprintf(stderr, "Opción no reconocida\n");
                 exit(EXIT_FAILURE);
         }
     }
 
-    if (port == -1 || max_clients == -1) {
+    if (port == -1 || max_clients == -1 || argc != 5) {
         fprintf(stderr, "Debe especificar el puerto y la cantidad de jugadores.\n");
         mostrarAyuda();
         exit(EXIT_FAILURE);
     }
     
-
     // Inicialización de semáforos
     inicializarSemaforos(); 
 
@@ -232,7 +239,7 @@ int main(int argc, char *argv[]) {
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
             perror("accept");
             close(server_fd);
-            cerrarSocketsClientes();
+            liberar_Recursos(1);
             exit(EXIT_FAILURE);
         }
 
@@ -241,7 +248,8 @@ int main(int argc, char *argv[]) {
         int valread = recv(new_socket, bufferConexion, 1024, 0);
         if (valread < 0) {
             perror("Error en recv");
-            cerrarSocketsClientes();
+            close(server_fd);
+            liberar_Recursos(1);
             exit(EXIT_FAILURE);
         }
         if (valread == 0){
@@ -263,7 +271,7 @@ int main(int argc, char *argv[]) {
         strcat(leyenda, bufferConexion);
 
         int send_result = send(new_socket, leyenda, strlen(leyenda), 0);
-        if (send_result <= 0) {
+        if (send_result < 0) {
             perror("Error en send en armado de conexión con cliente");
             close(new_socket);
             cerrarSocketsClientes();
