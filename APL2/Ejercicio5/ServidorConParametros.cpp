@@ -466,8 +466,10 @@ void inicializarSemaforos() {
     // porque carajo mandé el 85, no recuerdo...
     int valorSemServi = 85;
     sem_getvalue(semaforos[0], &valorSemServi);
-    if (valorSemServi == 0)
+    if (valorSemServi == 0){
+        printf("Ya existe un proceso servidor ejecutando.\n");
         exit(EXIT_FAILURE);
+    }
 }
 
 void liberar_Recursos(int signum) {
