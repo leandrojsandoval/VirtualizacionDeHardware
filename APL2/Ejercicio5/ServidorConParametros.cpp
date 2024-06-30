@@ -194,6 +194,7 @@ int main(int argc, char *argv[]) {
 
     if (ftruncate(idAux, sizeof(dato)) == -1) {
         cerr << "Error al configurar el tamaño de la memoria compartida: " << strerror(errno) << endl;
+        close(idAux); // Cerrar idAux antes de salir
         close(server_fd);
         shm_unlink(MemPid);
         eliminar_Sem();
@@ -203,15 +204,25 @@ int main(int argc, char *argv[]) {
     dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux, 0);
     if (pidA == MAP_FAILED) {
         cerr << "Error al mapear la memoria compartida: " << strerror(errno) << endl;
+        close(idAux); // Cerrar idAux antes de salir
         close(server_fd);
         shm_unlink(MemPid);
         eliminar_Sem();
         exit(EXIT_FAILURE);
     }
+    // Cerrar idAux después de mapear
     close(idAux);
+
+    // Asignar valores a la estructura en la memoria compartida
     pidA->pidServ = getpid();
     pidA->Socket_Escucha = server_fd;
-    munmap(pidA, sizeof(dato));
+    if (munmap(pidA, sizeof(dato)) == -1) {
+        cerr << "Error al desmapear la memoria compartida: " << strerror(errno) << endl;
+        close(server_fd); // Asegurarse de que server_fd se cierra en caso de error
+        shm_unlink(MemPid);
+        eliminar_Sem();
+        exit(EXIT_FAILURE);
+    }
 
     printf("Servidor escuchando en el puerto %d\n", port);
 
@@ -420,24 +431,24 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    // Cerrar sockets de clientes
-    for (const auto& jugador : clientesSockets) {
-        close(jugador.idJugador);
-    }
-
-    // Cerrar el socket del servidor
-    close(server_fd);
 
     partida_activa = false;
 
     liberar_Recursos(1);
 
+    // Cerrar el socket del servidor
+    close(server_fd);
+
     exit(EXIT_SUCCESS);
 }
 
 void eliminar_Sem() {
-    sem_close(semaforos[0]);
-    sem_unlink("servidorSocket");
+    if (sem_close(semaforos[0]) == -1) {
+        cerr << "Error al cerrar el semáforo: " << strerror(errno) << endl;
+    }
+    if(sem_unlink("servidorSocket") == -1) {
+        cerr << "Error al eliminar el semáforo: " << strerror(errno) << endl;
+    }
 }
 
 void inicializarSemaforos() {
@@ -452,19 +463,50 @@ void inicializarSemaforos() {
 }
 
 void liberar_Recursos(int signum) {
-    if(!partida_activa){
-        eliminar_Sem();
-        //creamos una memoria compartida especial donde guardaremos el pid del servidorSocket y el socket de escucha.
-        int idAux = shm_open(MemPid, O_CREAT | O_RDWR, 0600);
-        dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux, 0);
-        close(idAux);
-        shutdown(pidA->Socket_Escucha, SHUT_RDWR);
-        munmap(pidA, sizeof(dato));
-        shm_unlink(MemPid);
+    if(partida_activa)
+        return;
+    eliminar_Sem();
+
+    // Creamos una memoria compartida especial donde guardaremos el pid del servidorSocket y el socket de escucha.
+    int idAux = shm_open(MemPid, O_CREAT | O_RDWR, 0600);
+    if (idAux == -1) {
+        perror("Error en shm_open");
         cerrarSocketsClientes();
-        exit(EXIT_SUCCESS);
+        exit(EXIT_FAILURE);
     }
+
+    dato *pidA = (dato*)mmap(NULL, sizeof(dato), PROT_READ | PROT_WRITE, MAP_SHARED, idAux, 0);
+    if (pidA == MAP_FAILED) {
+        perror("Error en mmap");
+        close(idAux);
+        cerrarSocketsClientes();
+        exit(EXIT_FAILURE);
+    }
+
+    close(idAux);
+
+    // Añadir verificación y mensajes de depuración
+    if (pidA->Socket_Escucha > 0) { // Verificar si el socket es válido
+        if (shutdown(pidA->Socket_Escucha, SHUT_RDWR) == -1) {
+            perror("Error en shutdown");
+        }
+    } else {
+        fprintf(stderr, "Socket_Escucha no es válido: %d\n", pidA->Socket_Escucha);
+    }
+
+    if (munmap(pidA, sizeof(dato)) == -1) {
+        perror("Error en munmap");
+    }
+
+    if (shm_unlink(MemPid) == -1) {
+        perror("Error en shm_unlink");
+    }
+
+    cerrarSocketsClientes();
+    printf("Recursos liberados.\n");
+    exit(EXIT_SUCCESS);
 }
+
 
 void mostrarAyuda() {
     printf("Uso: ./Servidor -p puerto -j cantJugadores\n");
