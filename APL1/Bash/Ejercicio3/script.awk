@@ -1,3 +1,4 @@
+
 BEGIN {
     cantidadDePalabrasTotales = 0;
     palabraRepetidaMasVeces = 0;
@@ -9,14 +10,14 @@ BEGIN {
 }
 
 {
-	cantidadDePalabrasTotales += NF;
-    
+    cantidadDePalabrasTotales += NF;
+
     for(i = 1; i <= NF; i++){
 
         # Elimino caracteres de puntuación y de salto de línea
         gsub("\\.|,|\r|\n", "", $i);
 
-		longitudPalabra = length($i);
+        longitudPalabra = length($i);
 
         if (longitudPalabra > 0) {
 
@@ -36,29 +37,26 @@ BEGIN {
             if (incluirPalabra) {
                 cantidadPorLongitud[longitudPalabra]++;
                 palabras[$i]++;
+
+                # Recuento de caracteres sólo para palabras no omitidas
+                for (k = 1; k <= length($i); k++) {
+                    caracter = substr($i, k, 1);
+                    contadorDeCaracteres[caracter]++;
+                }
             }
         }
-
-	}
-
-    # Recuento de caracteres
-    for (i = 1; i <= length($0); i++) {
-        if(substr($0, i, 1) != " "){
-            contadorDeCaracteres[substr($0, i, 1)]++;
-        }
     }
-
 }
 
 END {
-
+    printf("----Tener en cuenta que el programa es casesensitive, osea si  omito la e, pueden aparecer palabras con E----\n");
     printf("La cantidad de palabras totales en el texto son: %d\n", cantidadDePalabrasTotales);
     printf("La cantidad de palabras omitidas en el texto son: %d\n", palabrasOmitidasPorArchivo);
     printf("Palabras validas a contabilidar: %d\n", cantidadDePalabrasTotales - palabrasOmitidasPorArchivo);
 
     for(cantidadCaracteres in cantidadPorLongitud) {
-		printf("Palabras con longitud (%d): => %d \n",cantidadCaracteres, cantidadPorLongitud[cantidadCaracteres]);
-	}
+        printf("Palabras con longitud (%d): => %d \n",cantidadCaracteres, cantidadPorLongitud[cantidadCaracteres]);
+    }
 
     printf("\n");
 
@@ -76,8 +74,9 @@ END {
         }
     }
     
-	promedioPalabrasPorArchivo = (cantidadDePalabrasTotales - palabrasOmitidasPorArchivo) / (ARGC -1);
-	printf("El promedio de palabras por archivo es: %d\n", promedioPalabrasPorArchivo);
+    promedioPalabrasPorArchivo = (cantidadDePalabrasTotales - palabrasOmitidasPorArchivo) / (ARGC - 1);
+    printf("El promedio de palabras por archivo es: %d\n", promedioPalabrasPorArchivo);
+
     caracterMasRepetido = "";
     ocurrenciasCaracterMasRepetido = 0;
 
@@ -89,5 +88,4 @@ END {
     }
 
     print "El caracter más repetido es '" caracterMasRepetido "' con " ocurrenciasCaracterMasRepetido " ocurrencias.";
-
 }

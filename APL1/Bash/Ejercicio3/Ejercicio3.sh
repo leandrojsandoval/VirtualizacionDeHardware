@@ -2,17 +2,17 @@
 #               Virtualizacion de hardware              #
 #                                                       #
 #   APL1 - Ejercicio 3                                  #
-#   Nombre del script: Ejercicio3.sh                    #
+#   Nombre del script: Ejercicio3.cpp                   #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
 #       Ocampo, Nicole Fabiana              44451238    #
 #       Sandoval Vasquez, Juan Leandro      41548235    #
-#       Vivas, Pablo Ezequiel               38703964    #
-#       Villegas, Lucas Ezequiel            37792844    #
 #       Tigani, Martin Sebastian            32788835    #
+#       Villegas, Lucas Ezequiel            37792844    #
+#       Vivas, Pablo Ezequiel               38703964    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
 
@@ -73,5 +73,13 @@ if ! [ -d "$directorio" ]; then
     exit 0;
 fi
 
-archivos=$(ls $directorio/*$extension)
-awk -v separador="$separador" -v omitir="$omitir" -f script.awk $archivos
+archivos=$(ls "$directorio"/*"$extension" 2> /dev/null);
+
+# Verificar que el directorio no esté vacío
+if [ -z "$archivos" ]; then
+    echo "ERROR: El directorio está vacío o no contiene archivos con la extensión especificada.";
+    ayuda;
+    exit 0;
+fi
+
+awk -v separador="$separador" -v omitir="$omitir" -f script.awk $archivos;

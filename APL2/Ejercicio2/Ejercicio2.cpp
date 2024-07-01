@@ -14,7 +14,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Vivas, Pablo Ezequiel               38703964    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
 */
@@ -27,8 +27,18 @@
 #include <unordered_map>
 #include <filesystem>
 #include <cstring>
+#include <algorithm>
 using namespace std;
 namespace fs = filesystem;
+
+void mostrar_ayuda(const string& nombre_programa) {
+    cout << "Usos: " << nombre_programa << " -t <nivel_paralelismo> -i <directorio> [-o <archivo_salida>]" << endl;
+    cout << "Parametros:" << endl;
+    cout << "  -t, --threads   <nro>    Cantidad de threads a ejecutar concurrentemente para procesar los archivos del directorio (Requerido). El número ingresado debe ser un entero positivo." << endl;
+    cout << "  -i, --input     <dir>    Ruta del directorio a analizar. (Requerido)" << endl;
+    cout << "  -o, --output    <file>   Ruta del archivo con los resultados del procesamiento. (Opcional)" << endl;
+    cout << "  -h, --help               Muestra esta ayuda y termina." << endl;
+}
 
 // Función para contar números en un archivo
 void contar_numeros_en_archivo(const vector<string>& archivos, unordered_map<char, int>& conteo_numeros, mutex& mtx, int thread_id) {
@@ -110,31 +120,69 @@ void procesar_archivos_en_directorio(const string& directorio, int nivel_paralel
     }
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 5) {
-        cerr << "Uso: " << argv[0] << " -t <nivel_paralelismo> -i <directorio> [-o <archivo_salida>]" << endl;
-        return 1;
-    }
+bool es_numero(const string& str) {
+    return !str.empty() && all_of(str.begin(), str.end(), ::isdigit);
+}
 
-    int nivel_paralelismo = 0;
-    string directorio;
-    bool generar_archivo = false;
-    string archivo_salida;
+bool validarParametros(int argc, char* argv[], int& nivel_paralelismo, string& directorio, bool& generar_archivo, string& archivo_salida) {
+    if (argc < 2) {
+        mostrar_ayuda(argv[0]);
+        return false;
+    }
 
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
         if (arg == "-t" || arg == "--threads") {
-            nivel_paralelismo = stoi(argv[++i]);
+            if (i + 1 < argc && es_numero(argv[i + 1])) {
+                nivel_paralelismo = stoi(argv[++i]);
+                if (nivel_paralelismo <= 0) {
+                    cerr << "El número de threads debe ser un entero positivo." << endl;
+                    return false;
+                }
+            } else {
+                cerr << "Debe proporcionar un número de threads positivo después de " << arg << "." << endl;
+                return false;
+            }
         } else if (arg == "-i" || arg == "--input") {
-            directorio = argv[++i];
+            if (i + 1 < argc) {
+                directorio = argv[++i];
+                if (!fs::is_directory(directorio)) {
+                    cerr << "La ruta proporcionada no es un directorio válido." << endl;
+                    return false;
+                }
+            } else {
+                cerr << "Debe proporcionar una ruta de directorio después de " << arg << "." << endl;
+                return false;
+            }
         } else if (arg == "-o" || arg == "--output") {
-            generar_archivo = true;
-            archivo_salida = argv[++i];
+            if (i + 1 < argc) {
+                generar_archivo = true;
+                archivo_salida = argv[++i];
+            } else {
+                cerr << "Debe proporcionar una ruta de archivo después de " << arg << "." << endl;
+                return false;
+            }
+        } else if (arg == "-h" || arg == "--help") {
+            mostrar_ayuda(argv[0]);
+            return false;
         }
     }
 
     if (nivel_paralelismo <= 0 || directorio.empty()) {
         cerr << "Parámetros inválidos. Asegúrese de proporcionar un nivel de paralelismo positivo y un directorio válido." << endl;
+        return false;
+    }
+
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    int nivel_paralelismo = 0;
+    string directorio;
+    bool generar_archivo = false;
+    string archivo_salida;
+
+    if (!validarParametros(argc, argv, nivel_paralelismo, directorio, generar_archivo, archivo_salida)) {
         return 1;
     }
 
@@ -142,4 +190,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
