@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 1                                  #
 #   Nombre del script: Ejercicio1.sh                    #

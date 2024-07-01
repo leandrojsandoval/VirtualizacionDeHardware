@@ -1,5 +1,5 @@
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 3                                  #
 #   Nombre del script: Ejercicio3.ps1                   #

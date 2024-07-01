@@ -1,7 +1,7 @@
 
 /*
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL2 - Ejercicio 2                                  #
 #   Nombre del script: Ejercicio2.cpp                   #

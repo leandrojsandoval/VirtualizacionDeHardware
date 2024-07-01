@@ -1,8 +1,8 @@
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 3                                  #
-#   Nombre del script: Ejercicio3.cpp                   #
+#   Nombre del script: Ejercicio3.sh                    #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
