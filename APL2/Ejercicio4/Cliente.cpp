@@ -77,6 +77,26 @@ void mostrarTablero()
     }
 }
 
+int leerCoordenada(int *fila, int *columna)
+{
+    char input[100];
+    int leidos;
+
+    if (fgets(input, sizeof(input), stdin) != NULL)
+    {
+        leidos = sscanf(input, "%d %d", fila, columna);
+        if (leidos == 2)
+        {
+            if (*fila >= 0 && *fila <= 3 && *columna >= 0 && *columna <= 3)
+            {
+                return 1; // Se leyeron dos números válidos
+            }else
+                return 0;
+            //return 1; // Se leyeron dos números
+        }
+    }
+    return 0; // No se leyeron dos números
+}
 int main(int argc, char *argv[])
 {
     signal(SIGUSR1, manejarSIGUSR1);
@@ -134,10 +154,22 @@ int main(int argc, char *argv[])
         elapsed = difftime(end, start);
         printf("Tiempo tomado: %.2f segundos\n", elapsed);
         mostrarTablero();
+        /*
         printf("Ingrese las coordenadas de la primera carta (fila columna): ");
         scanf("%d %d", &memoria->jugadas[0][0], &memoria->jugadas[0][1]);
         printf("Ingrese las coordenadas de la segunda carta (fila columna): ");
-        scanf("%d %d", &memoria->jugadas[1][0], &memoria->jugadas[1][1]);
+        scanf("%d %d", &memoria->jugadas[1][0], &memoria->jugadas[1][1]); */
+
+        do
+        {
+            printf("Ingrese las coordenadas de la primera (fila columna): ");
+        } while (!leerCoordenada(&memoria->jugadas[0][0], &memoria->jugadas[0][1]));
+
+        do
+        {
+            printf("Ingrese las coordenadas de la segunda (fila columna): ");
+        } while (!leerCoordenada(&memoria->jugadas[1][0], &memoria->jugadas[1][1]) ||
+                 (memoria->jugadas[0][0] == memoria->jugadas[1][0] && memoria->jugadas[0][1] == memoria->jugadas[1][1]));
 
         sem_post(sem_cliente);  // Notifica al servidor que el cliente ha hecho una jugada
         sem_wait(sem_servidor); // Espera a que el servidor procese la jugada
