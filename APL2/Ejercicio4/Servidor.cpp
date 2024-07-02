@@ -2,8 +2,8 @@
 #########################################################
 #               Virtualizacion de hardware              #
 #                                                       #
-#   APL2 - Ejercicio 1                                  #
-#   Nombre del script: Ejercicio1.cpp                   #
+#   APL2 - Ejercicio 4                                  #
+#   Nombre del script: Servidor.cpp                     #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
@@ -13,7 +13,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Vivas, Pablo Ezequiel               38703964    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
 */
