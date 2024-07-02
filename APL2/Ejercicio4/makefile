@@ -1,12 +1,12 @@
 all: cliente servidor
 
 servidor:
-	g++ servidor.cpp -o servidor -lpthread -lrt
+	g++ Servidor.cpp -o Servidor -lpthread -lrt
 
 cliente: 
-	g++ cliente.cpp -o cliente -lpthread -lrt
+	g++ Cliente.cpp -o Cliente -lpthread -lrt
 
 
 clean:
-	rm servidor
-	rm cliente
+	rm Servidor
+	rm Cliente
