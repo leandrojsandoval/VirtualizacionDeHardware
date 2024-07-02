@@ -1,6 +1,7 @@
 #!/bin/bash
+
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 5                                  #
 #   Nombre del script: Ejercicio5.sh                    #
@@ -13,16 +14,15 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Tigani, Martin Sebastian            32788835    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
+
 # Función para imprimir la información de un personaje
 getInfo() {
     local response=$1
 
     local length=$(echo "$response" | jq '. | length')
-
-
 
     if [[ $length -eq 0 ]]; then
         echo "Error: No se encontraron resultados para el nombre/nombres proporcionados."
@@ -37,19 +37,16 @@ getInfo() {
     fi
 }
 
-
 mostrarAyuda() {
 	echo "Modo de uso: bash $0 [-i | --id] ["1,2,3"] [ -n | --nombre ] ["rick, morty"]"
 	echo ""
 	echo "Uso de api y caches json"
 	echo "-i | --id	indica los ids a consultar"
 	echo "-n | --nombre indica los nombres a consultar."
-
 }
 
 # Función para verificar si un personaje con un ID específico está en caché
 PersonajeCacheId() {
-   
     local id=$1
     local filename="personaje_$id.json"
     if [[ -f "$filename" ]]; then
@@ -61,7 +58,6 @@ PersonajeCacheId() {
 
 # Función para verificar si un personaje con un nombre específico está en caché
 PersonajeCacheName() {
-    
     local name=$1
     local filename="personaje_$name.json"
     if [[ -f "$filename" ]]; then
@@ -102,7 +98,6 @@ PersonajeId() {
    
     
 }
-
 
 # Función para realizar la búsqueda HTTP de personajes por nombre
 PersonajeName() {
@@ -159,7 +154,6 @@ while true; do
     esac
 done
 
-
 # Verificar si se proporcionaron argumentos
 if [[ -z "$ids" && -z "$names" ]]; then
     echo "Error: Debes proporcionar al menos un argumento." >&2
@@ -168,9 +162,7 @@ fi
 
 # Verificar si se proporcionaron IDs y procesarlos
 if [ -n "$ids" ]; then
-
     PersonajeId "$ids"
-
 fi
 
 # Verificar si se proporcionaron nombres y procesarlos
