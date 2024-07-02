@@ -260,6 +260,13 @@ while true; do
 done
 
 
+# Verificar si hay parámetros adicionales después de procesar getopt
+if [[ $# -ne 0 ]]; then
+    echo "Error: Parámetros adicionales no reconocidos: $@"
+    mostrarAyuda
+    exit 1
+fi
+
 #por aca solo pasa la primer ejecucion
 
 nombreScript=$(readlink -f $0)
