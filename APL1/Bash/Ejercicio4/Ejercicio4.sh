@@ -14,7 +14,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Tigani, Martin Sebastian            32788835    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Segunda Entrega               #
 #                                                       #
 #########################################################
 

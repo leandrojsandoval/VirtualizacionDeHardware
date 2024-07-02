@@ -1,3 +1,23 @@
+/*
+#########################################################
+#               Virtualizacion de hardware              #
+#                                                       #
+#   APL2 - Ejercicio 5                                  #
+#   Nombre del script: ClienteConParametros.cpp         #
+#                                                       #
+#   Integrantes:                                        #
+#                                                       #
+#       Ocampo, Nicole Fabiana              44451238    #
+#       Sandoval Vasquez, Juan Leandro      41548235    #
+#       Tigani, Martin Sebastian            32788835    #
+#       Villegas, Lucas Ezequiel            37792844    #
+#       Vivas, Pablo Ezequiel               38703964    #
+#                                                       #
+#   Instancia de entrega: Segunda Entrega               #
+#                                                       #
+#########################################################
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
