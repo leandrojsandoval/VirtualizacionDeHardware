@@ -1,9 +1,9 @@
 /*
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
-#   APL2 - Ejercicio X                                  #
-#   Nombre del script: EjercicioX.cpp                   #
+#   APLX - Ejercicio X                                  #
+#   Nombre del script: EjercicioX.XX                    #
 #                                                       #
 #   Integrantes:                                        #
 #                                                       #
@@ -13,7 +13,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Vivas, Pablo Ezequiel               38703964    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: XXXXXXXXXX                    #
 #                                                       #
 #########################################################
 */

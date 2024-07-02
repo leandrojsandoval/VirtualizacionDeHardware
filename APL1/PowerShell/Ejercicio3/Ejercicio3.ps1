@@ -1,5 +1,5 @@
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 3                                  #
 #   Nombre del script: Ejercicio3.ps1                   #
@@ -12,7 +12,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Tigani, Martin Sebastian            32788835    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
 
@@ -53,16 +53,13 @@ Param(
     [string]$Directorio,
 
     [Parameter(Mandatory=$false)]
-    [string]$directorio2,
-
-    [Parameter(Mandatory=$false)]
     [string]$extension,
 
     [Parameter(Mandatory=$false)]
     [char]$separador,
 
     [Parameter(Mandatory=$false)]
-    [char]$omitir
+    [char[]]$omitir
 )
 
 # Verificar si el directorio existe
@@ -83,8 +80,29 @@ $conteoPalabras = @{};
 # Obtener la lista de archivos de texto en el directorio
 $archivos = Get-ChildItem -Path $Directorio -File -Filter "*$extension";
 
-$cantidadArchivos=0;
-$cantidadPalTotales=0;
+# Verificar si el directorio está vacío
+if ($archivos.Count -eq 0) {
+    Write-Host "El directorio especificado está vacío o no contiene archivos con la extensión especificada.";
+    exit;
+}
+
+$cantidadArchivos = 0;
+$cantidadPalTotales = 0;
+
+# Función para verificar si una palabra contiene algún carácter omitido
+function ContieneCaracteresOmitidos {
+    param (
+        [string]$palabra,
+        [char[]]$caracteresOmitidos
+    )
+
+    foreach ($caracter in $caracteresOmitidos) {
+        if ($palabra.Contains($caracter)) {
+            return $true
+        }
+    }
+    return $false
+}
 
 # Iterar sobre cada archivo de texto
 foreach ($archivo in $archivos) {
@@ -92,10 +110,15 @@ foreach ($archivo in $archivos) {
     # Leer el contenido del archivo
     $Contenido = Get-Content $archivo.FullName;
     $cantidadArchivos++;
-    $contenido=$contenido -replace '\.', '';
-    $palabras=$contenido -split $separador;
+    $Contenido = $Contenido -replace '\.', '';
+    $palabras = $Contenido -split $separador;
 
     foreach ($palabra in $palabras) {
+
+        # Verificar si la palabra contiene alguno de los caracteres a omitir
+        if ($omitir -and (ContieneCaracteresOmitidos -palabra $palabra -caracteresOmitidos $omitir)) {
+            continue
+        }
 
         $longitud = $palabra.Length
 
@@ -106,7 +129,6 @@ foreach ($archivo in $archivos) {
         }
 
         # Contar los caracteres y actualizar el conteo global
-        
         $caracteres = $palabra.ToCharArray();
         
         foreach ($caracter in $caracteres) {
@@ -123,12 +145,11 @@ foreach ($archivo in $archivos) {
         } else {
             $conteoPalabras[$palabra] = 1;
         }
-
     }
 
     # Contar las palabras en el contenido del archivo
     $NumeroPalabras = ($Contenido -split '\s+').Count;
-    $cantidadPalTotales+=$NumeroPalabras;
+    $cantidadPalTotales += $NumeroPalabras;
 }
 
 # Mostrar el conteo global de palabras de cada longitud

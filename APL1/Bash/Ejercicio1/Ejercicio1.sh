@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #########################################################
-#               Virtualizacion de hardware              #
+#               Virtualizacion de Hardware              #
 #                                                       #
 #   APL1 - Ejercicio 1                                  #
 #   Nombre del script: Ejercicio1.sh                    #
@@ -14,7 +14,7 @@
 #       Villegas, Lucas Ezequiel            37792844    #
 #       Tigani, Martin Sebastian            32788835    #
 #                                                       #
-#   Instancia de entrega: Primera Entrega               #
+#   Instancia de entrega: Reentrega                     #
 #                                                       #
 #########################################################
 
