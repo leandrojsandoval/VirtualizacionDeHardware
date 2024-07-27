@@ -1,4 +1,4 @@
-# Virtualizacion de Hardware
+# Virtualización de Hardware
 
 * Carrera INGENIERIA EN INFORMATICA
 * Asignatura VIRTUALIZACION DE HARDWARE (3654)
